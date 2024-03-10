@@ -1,0 +1,213 @@
+---
+title: "Mod_4_visualization"
+format: html
+editor: visual
+---
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
+
+```{r}
+library(tidyverse)
+library(faraway)
+
+data("worldcup")
+```
+
+## Basis plotting with ggplot2
+
+`ggplot` is used to construct the initial ggplot object. It takes a dataset in the form of a data frame as input. There are three patterns used to invoke `ggplot()` - `ggolot(data = df, aes(x, y, ...))` Uses the same data and aesthetics. Recommended when all layers use the dame data and the same set of aesthetics. Although other data can be added to other layers. - `ggplot(data = df)` Specifies the base data but no aesthetics. Is best used when all layers are based on the same dataset but individual layers vary in the variables used for their respective aesthetics. - `ggplot()` Initializes a bare `ggplot` skeleton, with no variable and/or aesthetic mapping. Useful when multiple datasets are used to combine layers.
+
+`ggplot` is very specific aout specifying aesthetics inside `aes`.
+
+```{r}
+#\ eval = FALSE
+# Good
+ggplot(worldcup, aes(x = Shots, y = Passes))
+
+# Bad
+ggplot(worldcup, x = Shots, y = Passes)
+```
+
+Used dataset has to be specified before or with the aesthetics. If no dataset is specified within `ggplot()` but inside another `geom_*` make sure to use the `data =` argument as `data` is not the first parameter expected in `geom` calls.
+
+```{r}
+# Good
+ggplot(worldcup, aes(x = Shots, y = Passes)) +
+  geom_point()
+
+ggplot(worldcup) +
+  geom_point(aes(x = Shots, y = Passes))
+
+ggplot() +
+  geom_point(data = worldcup, aes(x = Shots, y = Passes))
+
+# Bad
+ggplot() +
+  geom_point(worldcup, aes(x = Shots, y = Passes))
+```
+
+### Saving plots
+
+To save a plot using code in a script, take the following steps: (1) open a graphics device (e.g., using the function `pdf` or `png`) (2) run the code and (3) close the graphics device using the `dev.off` function. Note that the function you use to open a graphics device will depend on the type of device you want to open, but you close all devices with the same function (`dev.off`).
+
+### Geoms
+
+All geom functions have required and accepted aesthetics, e.g. `geom_point` requires `x` and `y`, but the function also accepts `alpha`, `color`, `fill`, `group`, `size`, `shape` and `stroke`.
+
+```{r}
+# Basic scatterplot with required aesthetics only
+ggplot(worldcup, aes(Time, Passes)) +
+  geom_point()
+
+# Avanced visualization of the same data with additional aesthetics arguments
+ggplot(worldcup, aes(Time, Passes,
+                     color = Position,
+                     size = Shots)) +
+  geom_point()
+
+```
+
+Combining several geoms in one plot allows us to create interesting graphs, e.g. by adding highlights.
+
+```{r}
+noteworthy_players <- worldcup %>% filter(Shots == max(Shots) | 
+                                            Passes == max(Passes)) %>%
+  mutate(point_label = paste(Team, Position, sep = ", "))
+
+ggplot(worldcup, aes(x = Passes, y = Shots)) + 
+  geom_point() + 
+  # notice how the additional layer is added from a different df
+  geom_text(data = noteworthy_players, aes(label = point_label), 
+            # Label orientation
+            vjust = "inward", hjust = "inward") 
+```
+
+### Using constant aesthetics
+
+Instead of mapping an aesthetic to an element of the dataset, we can apply a constant value. To do this, we specify the color aesthetic outside of an `aes` call:
+
+```{r}
+ggplot(worldcup, aes(x = Time, y = Passes)) + 
+  geom_point(color = "darkgreen")
+```
+
+This can be applied to all geoms, including `fill`, `shape`, and `size`. While `color` are specified by strings, `shape` is specified by a numbere between 1 and 21.
+
+## Guidelines for good plots
+
+The guidelines are:
+
+-   Aim for high data density
+
+-   Use clear, meaningful labels
+
+-   Provide useful references
+
+-   Highlight interesting aspects of the data
+
+-   Consider using small multiples
+
+-   Make order meaningful
+
+```{r}
+library(gridExtra)
+
+# install.packages("dlnm")
+library(dlnm)
+data("chicagoNMMAPS")
+```
+
+### Aim for high data density
+
+The ratio of "ink" to data should be kept as low as possible. Below are two graphs displaying the same amount of information. Notice how the right plot shows the same amount of information with minimal space. Further, the right plot has the background color and grid lines removed.
+
+```{r}
+h <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_col() +
+  ggtitle("1. Lower data quality") +
+  xlab("Number of players") +
+  ylab("")
+
+e <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_classic() + 
+  ggtitle("2. Higher data quality") +
+  xlab("Number of players") +
+  ylab("")
+
+grid.arrange(h, e, ncol = 2)
+```
+
+By increasing the data-to-ink ratio in a plot we ca help the viewers see the data more quickly. A cluttered plot is harder to interpret. Further, we leave some room to add additional data, references and highlights. A major method for decreasing clutter in the plot is choosing the right `theme`. A number of theme functions comes with `ggplot2`: - `theme_linedraw` - `theme_bw` - `theme_minimal` - `theme_void` - `theme_dark` - `theme_classic`
+
+```{r}
+#\ echo = FALSE
+
+tl <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_linedraw() + 
+  ggtitle("theme_linedraw") +
+  xlab("Number of players") +
+  ylab("")
+tb <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_bw() + 
+  ggtitle("theme_bw") +
+  xlab("Number of players") +
+  ylab("")
+tm <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_minimal() + 
+  ggtitle("theme_minimal") +
+  xlab("Number of players") +
+  ylab("")
+tv <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_void() + 
+  ggtitle("theme_void") +
+  xlab("Number of players") +
+  ylab("")
+td <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_dark() + 
+  ggtitle("theme_dark") +
+  xlab("Number of players") +
+  ylab("")
+tc <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_classic() + 
+  ggtitle("theme_classic") +
+  xlab("Number of players") +
+  ylab("")
+
+grid.arrange(tl, tb, tm, tv, td, td, ncol = 2)
+```
+
+Additional themes are available with the `ggthemes` package.
+
+### Use Clearm Meaningful Labels
+
+The default for `ggplot2` is to use column names as axis labels. While this is convenient for exploratory plots, it is not adequate for presentations and publications. For EDA we can stick to short names like "wt", but should use longer, precise labeling for another audience ("Weight \[kg\]").
+
+## Facetting
