@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Mod_4_visualization
 
 ``` r
@@ -46,7 +45,7 @@ ggplot(worldcup, aes(x = Shots, y = Passes))
 ggplot(worldcup, x = Shots, y = Passes)
 ```
 
-The `data` argument has to be specified before or with the aesthetics.
+The `data` aargument has to be specified before or with the aesthetics.
 If no dataset is specified within `ggplot()` but inside another `geom_*`
 make sure to use the `data` argument as `data` is not the first
 parameter expected in `geom` calls.
@@ -88,7 +87,7 @@ ggplot(worldcup, aes(Time, Passes)) +
   geom_point()
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-4-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-4-1.png)
 
 ``` r
 # Avanced visualization of the same data with additional aesthetics arguments
@@ -98,7 +97,7 @@ ggplot(worldcup, aes(Time, Passes,
   geom_point()
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-4-2.png)
+![](README_files/figure-commonmark/unnamed-chunk-4-2.png)
 
 Combining several geoms in one plot allows us to create interesting
 graphs, e.g. by adding highlights.
@@ -116,7 +115,7 @@ ggplot(worldcup, aes(x = Passes, y = Shots)) +
             vjust = "inward", hjust = "inward") 
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-5-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-5-1.png)
 
 ### Using constant aesthetics
 
@@ -129,7 +128,7 @@ ggplot(worldcup, aes(x = Time, y = Passes)) +
   geom_point(color = "darkgreen")
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-6-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-6-1.png)
 
 This can be applied to all geoms, including `fill`, `shape`, and `size`.
 While `color` are specified by strings, `shape` is specified by a
@@ -179,7 +178,7 @@ e <- worldcup %>%
 grid.arrange(h, e, ncol = 2)
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-7-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-7-1.png)
 
 By increasing the data-to-ink ratio in a plot we ca help the viewers see
 the data more quickly. A cluttered plot is harder to interpret. Further,
@@ -189,7 +188,7 @@ major method for decreasing clutter in the plot is choosing the right
 `theme_linedraw` - `theme_bw` - `theme_minimal` - `theme_void` -
 `theme_dark` - `theme_classic`
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-8-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-8-1.png)
 
 Additional themes are available with the `ggthemes` package.
 
@@ -202,7 +201,7 @@ presentations and publications. For EDA we can stick to short names like
 (“Weight \[kg\]”). If variables require longer labels, consider flipping
 the axes with `coord_flip`.
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-9-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-9-1.png)
 
 Include units of measurement - where relevant - in axis titles or tick
 marks. The `scale_*` (e.g. `scale_x_continuous`) from the `scales`
@@ -222,7 +221,7 @@ worldcup %>%
   ggthemes::theme_tufte()
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-10-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-10-1.png)
 
 ### Provide useful references
 
@@ -245,7 +244,7 @@ r <- ggplot(worldcup, aes(Passes, Shots)) +
 grid.arrange(n, r, ncol = 2)
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-11-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-11-1.png)
 
 Some considerations for adding references: - Add reference layers
 first - Add transparency `alpha` - Use neutral colors (greys) - Use
@@ -286,7 +285,7 @@ a <- ggplot(worldcup, aes(Time, Shots)) +
 grid.arrange(h, v, a, ncol = 3)
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-12-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-12-1.png)
 
 ``` r
 r <- ggplot(worldcup, aes(Time, Shots)) +
@@ -325,7 +324,7 @@ pa <- ggplot(worldcup, aes(Time, Shots)) +
 grid.arrange(r, pl, pa, ncol = 2)
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-13-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-13-1.png)
 
 Adding test is another great way of highlighting features of the data.
 Hightlighting layers like `geom_text` often require a designated
@@ -345,14 +344,14 @@ ggplot(worldcup, aes(Passes, Shots)) +
   theme_few()
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-14-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-14-1.png)
 
 ### Use small multiplets
 
 Multiplets are small plots with the same x- and y-axes showing different
 subsets of the data. They are a great way to de-clutter busy plots.
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-15-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-15-1.png)
 
 ``` r
 ggplot(worldcup, aes(Time, Shots)) + 
@@ -361,7 +360,7 @@ ggplot(worldcup, aes(Time, Shots)) +
   facet_grid(. ~ Position)
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-16-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-16-1.png)
 
 \`facet_grid\` can facet by either rows or columns, or both.
 
@@ -377,7 +376,7 @@ worldcup %>%
   facet_grid(Team ~ Position) 
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-18-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-18-1.png)
 
 While `facet_grid` is best used for two discrete variables and all
 combinations of the variables are available, `facet_wrap` is best used
@@ -390,7 +389,7 @@ worldcup %>%
   facet_wrap(~ Team, ncol = 6) 
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-19-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-19-1.png)
 
 ### Make order meaningful
 
@@ -422,7 +421,7 @@ b <- worldcup %>%
 grid.arrange(a, b, ncol = 2)
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-20-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-20-1.png)
 
 We can also use a variable of interest to order multiplets. Here, we use
 the average number of shots taken to order player positions.
@@ -448,7 +447,7 @@ worldcup %>%
     ggplot2 3.3.4.
     ℹ Please use "none" instead.
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-21-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-21-1.png)
 
 ``` r
 worldcup %>%
@@ -469,11 +468,6 @@ worldcup %>%
   ylab("")
 ```
 
-![](Visaulizations_with_ggplot_files/figure-commonmark/unnamed-chunk-22-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-22-1.png)
 
 ## Colors and scales
-=======
-# Building Data Visualizastion tools
-
-Course assignments and documentation for module 4 of the Mastering Software Development in R Specialization. 
->>>>>>> ef81a2cf3f6a72e12274348ab846b0763651a70f
