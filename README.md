@@ -1,11 +1,12 @@
 # Mod_4_visualization
 
 ``` r
-library(tidyverse)
-library(gridExtra)
-library(ggthemes)
-library(faraway)
 library(dlnm)
+library(faraway)
+library(ggthemes)
+library(gridExtra)
+library(stringr)
+library(tidyverse)
 data("chicagoNMMAPS")
 data("worldcup")
 ```
@@ -497,19 +498,46 @@ worldcup %>%
 ## Mapping
 
 ``` r
+library(choroplethr)
+```
+
+    Warning: package 'choroplethr' was built under R version 4.3.3
+
+    Loading required package: acs
+
+    Warning: package 'acs' was built under R version 4.3.3
+
+    Loading required package: XML
+
+
+    Attaching package: 'acs'
+
+    The following object is masked from 'package:dplyr':
+
+        combine
+
+    The following object is masked from 'package:gridExtra':
+
+        combine
+
+    The following object is masked from 'package:base':
+
+        apply
+
+``` r
 library(maps)
 ```
 
 
     Attaching package: 'maps'
 
-    The following object is masked from 'package:faraway':
-
-        ozone
-
     The following object is masked from 'package:purrr':
 
         map
+
+    The following object is masked from 'package:faraway':
+
+        ozone
 
 ``` r
 library(viridis)
@@ -657,9 +685,19 @@ library(sp)
 
     Warning: package 'sp' was built under R version 4.3.3
 
-Geographic data is often stored in spatial objects: `SpacialPolygons`
-`SpatialPoints` `SpatialLines` `SpatialPolygonsDataFrame`
-`SpatialPointsDataFrame` `SpatialLinessDataFrame`
+Geographic data is often stored in spatial objects:
+
+- `SpacialPolygons`
+
+- `SpatialPoints`
+
+- `SpatialLines`
+
+- `SpatialPolygonsDataFrame`
+
+- `SpatialPointsDataFrame`
+
+- `SpatialLinessDataFrame`
 
 The `tigris` package pulls spatial data from the US Census. Results can
 be specified with the `state` and `county` parameters, while
@@ -1180,6 +1218,8 @@ another. To do that we can set `add = TRUE` in the added layer.
       |                                                                            
       |==============================================================        |  89%
       |                                                                            
+      |===============================================================       |  89%
+      |                                                                            
       |===============================================================       |  90%
       |                                                                            
       |===============================================================       |  91%
@@ -1260,6 +1300,246 @@ ggplot(denver_tracts_df, aes(long, lat, group = group)) +
 
 ![](README_files/figure-commonmark/unnamed-chunk-42-1.png)
 
+#### Coordinate reference systems
+
+Coordinate Reference Systems(CRS) specify how coordinates are laid-out
+on a 2D map: as longitude and latitude (WGS84) or projected (NADS83,
+UTM). These systems are not mutually compatible so it is important to
+check which system is used by a spatial object. Every spatial object has
+a CRS attribute which can be called with the `proj4string` function.
+
+``` r
+proj4string(denver_tracts)
+```
+
+    [1] "+proj=longlat +datum=NAD83 +no_defs"
+
+When creating a spatial object from a data frame, a CRS needs to be
+assigned.
+
+``` r
+# NOTE: This does not create a projection or re-project data!!!
+proj4string(new_spatial_object_from_df) <- "+proj=longlat +datum=NAD83"
+```
+
+To create a CRS class object we can use the `CRS()` function from the
+`sp` package.
+
+``` r
+CRS("+proj=longlat +datum=NAD27")
+```
+
+    Coordinate Reference System:
+    Deprecated Proj.4 representation: +proj=longlat +datum=NAD27 +no_defs 
+    WKT2 2019 representation:
+    GEOGCRS["unknown",
+        DATUM["North American Datum 1927",
+            ELLIPSOID["Clarke 1866",6378206.4,294.978698213898,
+                LENGTHUNIT["metre",1]],
+            ID["EPSG",6267]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["degree",0.0174532925199433],
+            ID["EPSG",8901]],
+        CS[ellipsoidal,2],
+            AXIS["longitude",east,
+                ORDER[1],
+                ANGLEUNIT["degree",0.0174532925199433,
+                    ID["EPSG",9122]]],
+            AXIS["latitude",north,
+                ORDER[2],
+                ANGLEUNIT["degree",0.0174532925199433,
+                    ID["EPSG",9122]]]] 
+
+The `spTransform` function from of the `rgdal` package can be used to
+change a spatial object’s CRS.
+
+``` r
+a_spatial_object <- spTransform(a_spatial_object,
+                                 CRS = CRS("+init=epsg:4267"))
+
+# Align the CRS of two objects
+a_spatial_object <- spTransform(a_spatial_object,
+                                 CRS = proj4string(another_sp_object))
+```
+
+With `mapproj`’s `coord_map()` function we can change the way maps are
+projected in a `ggplot` object.
+
+``` r
+library(mapproj)
+```
+
+    Warning: package 'mapproj' was built under R version 4.3.3
+
+``` r
+usmap <- map_data("state") %>%
+  ggplot(aes(long, lat, group = group)) +
+  geom_polygon(fill = "white", colour = "black")
+
+map_1 <- usmap + coord_map() + ggtitle("default") 
+map_2 <- usmap + coord_map("gilbert") + ggtitle("+ coord_map('gilbert')")
+map_3 <- usmap + coord_map("conic", lat0 = 30) + 
+  ggtitle("+ coord_map('conic', lat0 = 30)")
+
+grid.arrange(map_1, map_2, map_3, ncol = 1)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-47-1.png)
+
+#### Shapefiles
+
+Shapefiles are non-R-specific data, which are not constricted to just
+geographic information but can also contain additional information,
+e.g. the population. The `rgdal` package enables R to read shapefiles
+with the `readOGR()` function. This can also be achieved with the
+`readShape*()` functions from the `maptools` package. Shapefiles
+imported in this way are transformed into spatial objects. Spatial
+objects created in R can be transformed into shapefiles with the
+`rgdal::writeOGR()` function.
+
+#### R as Gographic Information System (GIS)
+
+R can be used to perform a number of GIS tasks like: Clipping Counting
+points in polygons Measuring areas in polygons
+
+``` r
+load("data/fars_colorado.RData")
+
+driver_data[1:5, 1:9]
+```
+
+      state st_case county                date latitude  longitud fatals drunk_dr
+    1     8   80001     51 2001-01-01 10:00:00 39.10972 -104.1597      3        2
+    2     8   80002     31 2001-01-04 19:00:00 39.68215 -104.9223      1        1
+    3     8   80003     31 2001-01-03 07:00:00 39.63500 -104.8953      1        1
+    4     8   80004     31 2001-01-05 20:00:00 39.71304 -104.9876      1        1
+    5     8   80005     29 2001-01-05 10:00:00 39.09733 -108.1056      1        0
+      age
+    1  34
+    2  32
+    3  49
+    4  54
+    5  73
+
+``` r
+map_data("county", region = "Colorado") %>%
+  ggplot(aes(x = long, y = lat, group = subregion)) + 
+  geom_polygon(color = "gray", fill = NA) + 
+  theme_void() + 
+  geom_point(data = driver_data,
+             aes(x = longitud, y = latitude, group = NULL),
+             alpha = 0.5, size = 0.7) 
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-49-1.png)
+
+Since the recorded accidents in the FARS data are linked to counties we
+can use this information for grouping. Based on the county-grouped
+values we can create a choropleth map.
+
+``` r
+library(choroplethrMaps)
+```
+
+    Warning: package 'choroplethrMaps' was built under R version 4.3.3
+
+``` r
+county_accidents <- driver_data %>%
+  mutate(county = stringr::str_pad(county, width = 3,
+                          side = "left", pad = "0")) %>% 
+  tidyr::unite(region, state, county, sep = "") %>% 
+  group_by(region) %>%
+  summarize(value = n(), .groups = "drop") %>%
+  mutate(region = as.numeric(region))
+
+county_choropleth(county_accidents, state_zoom = "colorado")
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-50-1.png)
+
+We can also create choropleth maps based on the count of points in a
+polygon. To achieve this we will use the polygons from the US Census
+data.
+
+``` r
+denver_fars <- driver_data %>% filter(county == 31)
+
+# Create spatial object
+denver_fars_sp <- denver_fars
+coordinates(denver_fars_sp) <- c("longitud", "latitude")
+proj4string(denver_fars_sp) <- CRS("+proj=longlat +datum=NAD27")
+
+# Align CRS for both, points and polygon data
+denver_tracts_proj <- spTransform(denver_tracts, CRS("+init=epsg:26954"))
+```
+
+    Warning in CPL_crs_from_input(x): GDAL Message 1: +init=epsg:XXXX syntax is
+    deprecated. It might return a CRS with a non-EPSG compliant axis order.
+
+``` r
+denver_fars_proj <- spTransform(denver_fars_sp, CRS(proj4string(denver_tracts_proj)))
+```
+
+``` r
+plot(denver_tracts_proj)
+plot(denver_fars_proj, add = TRUE, col = "red", pch = 1)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-52-1.png)
+
 ### htmlWidgets
 
-#### `plolty`
+There are several R packages which can create interactive graphics based
+on JavaScript: `leaflet`: Mapping `plotly`: Various plots (including
+maps) `network3D`: Network data `d3heatmap`: Heatmaps `DT`: Data tables
+`Diagrammr`: Diagrams and flowcharts
+
+Note: Outputs will only be interactive when created as HTML documents,
+included in Shiny apps, or inside RStudio’s Viewer panel.
+
+#### The `plotly` package
+
+There are two main ways of creating plots using `plotly`: 1. Using the
+package’s functions: `plot_ly`: renders most non-map graphs `plot_geo`
+and `plot_mapbax`: mapping 2. Use the `ggplotly` function to convert a
+`ggplot` object into a `plotly` object
+
+The `plotly` syntax deviates from that of `ggplot2` as it uses the `~`
+operator to indicate columns.
+
+``` r
+library(plotly)
+
+plotly::plot_ly(worldcup, type = "scatter",
+                x = ~ Time, y = ~ Shots, color = ~Position)
+```
+
+For constant values in the aesthetics we need to use the `I()` function.
+
+``` r
+plot_ly(worldcup, type = "scatter",
+        x = ~ Time, y = ~ Shots, color = I("darkred"))
+```
+
+By default, when the mouse cursor hovers one of the points the
+information displays the variables which are mapped to the aesthetics.
+We can change this via the `add_markers()` function:
+
+``` r
+worldcup %>%
+  mutate(Name = rownames(worldcup),
+         Label = paste0(Name, ", ", Team)) %>%
+  plot_ly(x = ~ Time, y = ~ Shots, color = ~ Position) %>%
+  add_markers(text = ~ Label, hoverinfo = "text")
+```
+
+We can also add HMTL style code to further customize the labels:
+
+``` r
+worldcup %>%
+  mutate(Name = rownames(worldcup)) %>%
+  plot_ly(x = ~ Time, y = ~ Shots, color = ~ Position) %>%
+  add_markers(text = ~ paste("<b>Name:</b> ", Name, "<br />", 
+                             "<b>Team:</b> ", Team),
+              hoverinfo = "text")
+```
