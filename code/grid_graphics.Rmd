@@ -1,0 +1,32 @@
+---
+title: "Grid_graphics"
+author: "Michal Rackiewicz"
+date: "2024-03-14"
+output: github_document:
+    variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Grid graphics
+
+The `grid` package is a base package, i.e. does not need to be installed, but it need to be loaded with a `library()` call. It is the underlying architecture for the graphilac outputs of `ggplot2`. Grid is a low-level of graphics, i.e. meant to modify specific aspects of graphics rather than functions, which produce plots. Grid graphics are separate from base R graphics. Almost any plot (or geom) can be created with grid graphics. However, `ggplot2` is more time efficient.
+
+### Graphical objects (grobs)
+
+Grobs are graphical objects created with grid graphics functions. They can be added to or taken away from larger grid graphics objects, like `ggplot2` plots. The `grid` package offers a family of `*grob` functions that can create many elements like: `circleGrob` `legendGrob` `linesGrob` `polygonGrob` `rasterGrob` `rectGrob` `segmentGrob` `xaxisGrob` `yaxisGrob`
+
+The `sp` parameter inside these functions specifies the graphical aesthetics parameters like color, fill, line type, line width, etc. These are specified in a `gpar` object. The parameters which can be specified inside the `gpar` object are: `alpha`: transparency `col`: color `fill`: fill `fontface`, `fontstyle`, `fontsize`: font elements `lineend`: line end style `linejoin`: line join style `lty`: line type `lwd`: line width
+```{r}
+library(grid)
+```
+
+```{r}
+basic_circle <-  circleGrob(x = 1, y = 1, r = 3, 
+                            gp = gpar(col =  "darkred", lty = 3))
+grid.draw(basic_circle)
+```
+
+Packages like `gridExtra` provide additional functions that can be used to extend `grid` functionality.
