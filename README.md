@@ -1,4 +1,4 @@
-# Mod_4_visualization
+# Building Data Visualization Tools
 
 ``` r
 library(dlnm)
@@ -7,6 +7,10 @@ library(ggthemes)
 library(gridExtra)
 library(stringr)
 library(tidyverse)
+library(webshot2)
+```
+
+``` r
 data("chicagoNMMAPS")
 data("worldcup")
 ```
@@ -87,7 +91,7 @@ ggplot(worldcup, aes(Time, Passes)) +
   geom_point()
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-4-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-5-1.png)
 
 ``` r
 # Avanced visualization of the same data with additional aesthetics arguments
@@ -97,7 +101,7 @@ ggplot(worldcup, aes(Time, Passes,
   geom_point()
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-4-2.png)
+![](README_files/figure-commonmark/unnamed-chunk-5-2.png)
 
 Combining several geoms in one plot allows us to create interesting
 graphs, e.g. by adding highlights.
@@ -115,7 +119,7 @@ ggplot(worldcup, aes(x = Passes, y = Shots)) +
             vjust = "inward", hjust = "inward") 
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-5-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-6-1.png)
 
 #### Using constant aesthetics
 
@@ -128,7 +132,7 @@ ggplot(worldcup, aes(x = Time, y = Passes)) +
   geom_point(color = "darkred")
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-6-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-7-1.png)
 
 This can be applied to all geoms, including `fill`, `shape`, and `size`.
 While `color` are specified by strings, `shape` is specified by a
@@ -144,7 +148,7 @@ ggplot(worldcup, aes(x = Time, y = Passes, color = Position)) +
   theme_few()
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-7-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-8-1.png)
 
 They can be overridden with the `aes` function inside the new geom.
 
@@ -155,7 +159,7 @@ ggplot(worldcup, aes(x = Time, y = Passes, color = Team)) +
   theme(legend.position = "none")
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-8-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-9-1.png)
 
 ## Guidelines for good plots
 
@@ -201,7 +205,7 @@ e <- worldcup %>%
 grid.arrange(h, e, ncol = 2)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-9-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-10-1.png)
 
 By increasing the data-to-ink ratio in a plot we ca help the viewers see
 the data more quickly. A cluttered plot is harder to interpret. Further,
@@ -211,7 +215,7 @@ major method for decreasing clutter in the plot is choosing the right
 `theme_linedraw` - `theme_bw` - `theme_minimal` - `theme_void` -
 `theme_dark` - `theme_classic`
 
-![](README_files/figure-commonmark/unnamed-chunk-10-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-11-1.png)
 
 Additional themes are available with the `ggthemes` package.
 
@@ -224,7 +228,7 @@ presentations and publications. For EDA we can stick to short names like
 (“Weight \[kg\]”). If variables require longer labels, consider flipping
 the axes with `coord_flip`.
 
-![](README_files/figure-commonmark/unnamed-chunk-11-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-12-1.png)
 
 Include units of measurement - where relevant - in axis titles or tick
 marks. The `scale_*` (e.g. `scale_x_continuous`) from the `scales`
@@ -244,7 +248,7 @@ worldcup %>%
   ggthemes::theme_tufte()
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-12-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-13-1.png)
 
 ### Provide useful references
 
@@ -267,7 +271,7 @@ r <- ggplot(worldcup, aes(Passes, Shots)) +
 grid.arrange(n, r, ncol = 2)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-13-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-14-1.png)
 
 Some considerations for adding references: - Add reference layers
 first - Add transparency `alpha` - Use neutral colors (greys) - Use
@@ -308,7 +312,7 @@ a <- ggplot(worldcup, aes(Time, Shots)) +
 grid.arrange(h, v, a, ncol = 3)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-14-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-15-1.png)
 
 ``` r
 r <- ggplot(worldcup, aes(Time, Shots)) +
@@ -347,7 +351,7 @@ pa <- ggplot(worldcup, aes(Time, Shots)) +
 grid.arrange(r, pl, pa, ncol = 2)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-15-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-16-1.png)
 
 Adding test is another great way of highlighting features of the data.
 Hightlighting layers like `geom_text` often require a designated
@@ -367,14 +371,14 @@ ggplot(worldcup, aes(Passes, Shots)) +
   theme_few()
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-16-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-17-1.png)
 
 ### Use small multiplets
 
 Multiplets are small plots with the same x- and y-axes showing different
 subsets of the data. They are a great way to de-clutter busy plots.
 
-![](README_files/figure-commonmark/unnamed-chunk-17-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-18-1.png)
 
 ``` r
 ggplot(worldcup, aes(Time, Shots)) + 
@@ -383,7 +387,7 @@ ggplot(worldcup, aes(Time, Shots)) +
   facet_grid(. ~ Position)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-18-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-19-1.png)
 
 \`facet_grid\` can facet by either rows or columns, or both.
 
@@ -399,7 +403,7 @@ worldcup %>%
   facet_grid(Team ~ Position) 
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-20-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-21-1.png)
 
 While `facet_grid` is best used for two discrete variables and all
 combinations of the variables are available, `facet_wrap` is best used
@@ -412,7 +416,7 @@ worldcup %>%
   facet_wrap(~ Team, ncol = 6) 
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-21-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-22-1.png)
 
 ### Make order meaningful
 
@@ -444,7 +448,7 @@ b <- worldcup %>%
 grid.arrange(a, b, ncol = 2)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-22-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-23-1.png)
 
 We can also use a variable of interest to order multiplets. Here, we use
 the average number of shots taken to order player positions.
@@ -470,7 +474,7 @@ worldcup %>%
     ggplot2 3.3.4.
     ℹ Please use "none" instead.
 
-![](README_files/figure-commonmark/unnamed-chunk-23-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-24-1.png)
 
 ``` r
 worldcup %>%
@@ -491,7 +495,7 @@ worldcup %>%
   ylab("")
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-24-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-25-1.png)
 
 ## Colors and scales
 
@@ -581,7 +585,7 @@ us_map %>%
   theme_void()
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-27-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-28-1.png)
 
 Using lines requires a `group` aesthetic otherwise all line will be
 connected
@@ -594,7 +598,7 @@ us_map %>%
   theme_void()
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-28-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-29-1.png)
 
 ``` r
 us_map %>% 
@@ -604,7 +608,7 @@ us_map %>%
   theme_void()
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-29-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-30-1.png)
 
 `geom_path` is the preferred geom over `geom_line` for drawing maps
 because `geom_path` connects the x-axis values based on their order in
@@ -622,7 +626,7 @@ us_map %>%
   theme_void()
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-30-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-31-1.png)
 
 To make a choropleth map we can use the `viridis` package and map a
 continuous variable to the `scale_fill_viridis` function.
@@ -666,24 +670,14 @@ votes.repub %>%
   scale_fill_viridis(name = "Republican\nvotes [%]")
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-32-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-33-1.png)
 
 ### Spatial objects
 
 ``` r
 library(tigris)
-```
-
-    Warning: package 'tigris' was built under R version 4.3.3
-
-    To enable caching of data, set `options(tigris_use_cache = TRUE)`
-    in your R script or .Rprofile.
-
-``` r
 library(sp)
 ```
-
-    Warning: package 'sp' was built under R version 4.3.3
 
 Geographic data is often stored in spatial objects:
 
@@ -703,171 +697,16 @@ The `tigris` package pulls spatial data from the US Census. Results can
 be specified with the `state` and `county` parameters, while
 `cb = FALSE` can be set for a low resolution file.
 
-
-      |                                                                            
-      |                                                                      |   0%
-      |                                                                            
-      |=                                                                     |   1%
-      |                                                                            
-      |==                                                                    |   3%
-      |                                                                            
-      |===                                                                   |   5%
-      |                                                                            
-      |====                                                                  |   6%
-      |                                                                            
-      |=====                                                                 |   7%
-      |                                                                            
-      |======                                                                |   9%
-      |                                                                            
-      |=======                                                               |   9%
-      |                                                                            
-      |========                                                              |  11%
-      |                                                                            
-      |========                                                              |  12%
-      |                                                                            
-      |=========                                                             |  13%
-      |                                                                            
-      |==========                                                            |  15%
-      |                                                                            
-      |===========                                                           |  15%
-      |                                                                            
-      |============                                                          |  17%
-      |                                                                            
-      |============                                                          |  18%
-      |                                                                            
-      |=============                                                         |  19%
-      |                                                                            
-      |==============                                                        |  20%
-      |                                                                            
-      |===============                                                       |  21%
-      |                                                                            
-      |================                                                      |  23%
-      |                                                                            
-      |=================                                                     |  25%
-      |                                                                            
-      |==================                                                    |  26%
-      |                                                                            
-      |===================                                                   |  27%
-      |                                                                            
-      |====================                                                  |  29%
-      |                                                                            
-      |=====================                                                 |  29%
-      |                                                                            
-      |======================                                                |  31%
-      |                                                                            
-      |=======================                                               |  32%
-      |                                                                            
-      |=======================                                               |  33%
-      |                                                                            
-      |========================                                              |  35%
-      |                                                                            
-      |=========================                                             |  35%
-      |                                                                            
-      |==========================                                            |  37%
-      |                                                                            
-      |===========================                                           |  38%
-      |                                                                            
-      |===========================                                           |  39%
-      |                                                                            
-      |============================                                          |  40%
-      |                                                                            
-      |=============================                                         |  41%
-      |                                                                            
-      |==============================                                        |  43%
-      |                                                                            
-      |===============================                                       |  44%
-      |                                                                            
-      |===============================                                       |  45%
-      |                                                                            
-      |================================                                      |  46%
-      |                                                                            
-      |=================================                                     |  47%
-      |                                                                            
-      |==================================                                    |  49%
-      |                                                                            
-      |===================================                                   |  50%
-      |                                                                            
-      |====================================                                  |  51%
-      |                                                                            
-      |=====================================                                 |  52%
-      |                                                                            
-      |=====================================                                 |  53%
-      |                                                                            
-      |======================================                                |  55%
-      |                                                                            
-      |=======================================                               |  56%
-      |                                                                            
-      |========================================                              |  57%
-      |                                                                            
-      |=========================================                             |  58%
-      |                                                                            
-      |=========================================                             |  59%
-      |                                                                            
-      |==========================================                            |  60%
-      |                                                                            
-      |===========================================                           |  62%
-      |                                                                            
-      |============================================                          |  63%
-      |                                                                            
-      |=============================================                         |  64%
-      |                                                                            
-      |=============================================                         |  65%
-      |                                                                            
-      |==============================================                        |  66%
-      |                                                                            
-      |===============================================                       |  68%
-      |                                                                            
-      |================================================                      |  69%
-      |                                                                            
-      |=================================================                     |  70%
-      |                                                                            
-      |==================================================                    |  71%
-      |                                                                            
-      |===================================================                   |  72%
-      |                                                                            
-      |====================================================                  |  74%
-      |                                                                            
-      |=====================================================                 |  76%
-      |                                                                            
-      |======================================================                |  77%
-      |                                                                            
-      |=======================================================               |  78%
-      |                                                                            
-      |========================================================              |  80%
-      |                                                                            
-      |=========================================================             |  82%
-      |                                                                            
-      |==========================================================            |  83%
-      |                                                                            
-      |===========================================================           |  84%
-      |                                                                            
-      |============================================================          |  86%
-      |                                                                            
-      |=============================================================         |  88%
-      |                                                                            
-      |==============================================================        |  89%
-      |                                                                            
-      |===============================================================       |  90%
-      |                                                                            
-      |================================================================      |  92%
-      |                                                                            
-      |=================================================================     |  92%
-      |                                                                            
-      |==================================================================    |  94%
-      |                                                                            
-      |===================================================================   |  96%
-      |                                                                            
-      |====================================================================  |  97%
-      |                                                                            
-      |===================================================================== |  98%
-      |                                                                            
-      |======================================================================| 100%
+``` r
+denver_tracts <- tracts(state = "CO", county = 31, cb = TRUE, 
+                        class = "sp")
+```
 
 ``` r
 plot(denver_tracts)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-36-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-37-1.png)
 
 The `bbox` function retrieves the longitude and latitude of the bounding
 box.
@@ -928,6 +767,8 @@ another. To do that we can set `add = TRUE` in the added layer.
       |                                                                            
       |==                                                                    |   3%
       |                                                                            
+      |==                                                                    |   4%
+      |                                                                            
       |===                                                                   |   4%
       |                                                                            
       |===                                                                   |   5%
@@ -973,8 +814,6 @@ another. To do that we can set `add = TRUE` in the added layer.
       |============                                                          |  16%
       |                                                                            
       |============                                                          |  17%
-      |                                                                            
-      |============                                                          |  18%
       |                                                                            
       |=============                                                         |  18%
       |                                                                            
@@ -1261,7 +1100,7 @@ plot(denver_tracts, col = "lightgrey")
 plot(roads, col = "darkred", add = TRUE)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-40-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-41-1.png)
 
 With the `sp` package data stored in data frames can be converted into
 spatial objects. For using spatial objects with `ggplot2` we can convert
@@ -1298,7 +1137,7 @@ ggplot(denver_tracts_df, aes(long, lat, group = group)) +
   theme_void()
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-42-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-43-1.png)
 
 #### Coordinate reference systems
 
@@ -1384,7 +1223,7 @@ map_3 <- usmap + coord_map("conic", lat0 = 30) +
 grid.arrange(map_1, map_2, map_3, ncol = 1)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-47-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-48-1.png)
 
 #### Shapefiles
 
@@ -1431,7 +1270,7 @@ map_data("county", region = "Colorado") %>%
              alpha = 0.5, size = 0.7) 
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-49-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-50-1.png)
 
 Since the recorded accidents in the FARS data are linked to counties we
 can use this information for grouping. Based on the county-grouped
@@ -1455,7 +1294,7 @@ county_accidents <- driver_data %>%
 county_choropleth(county_accidents, state_zoom = "colorado")
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-50-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-51-1.png)
 
 We can also create choropleth maps based on the count of points in a
 polygon. To achieve this we will use the polygons from the US Census
@@ -1485,9 +1324,17 @@ plot(denver_tracts_proj)
 plot(denver_fars_proj, add = TRUE, col = "red", pch = 1)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-52-1.png)
+![](README_files/figure-commonmark/unnamed-chunk-53-1.png)
 
-### htmlWidgets
+## htmlWidgets
+
+NOTE: The interactive versions of the maps are available in the HTML
+version. This document contains only snapshots of the interactive plots.
+
+``` r
+library(plotly)
+library(leaflet)
+```
 
 There are several R packages which can create interactive graphics based
 on JavaScript: `leaflet`: Mapping `plotly`: Various plots (including
@@ -1497,7 +1344,7 @@ maps) `network3D`: Network data `d3heatmap`: Heatmaps `DT`: Data tables
 Note: Outputs will only be interactive when created as HTML documents,
 included in Shiny apps, or inside RStudio’s Viewer panel.
 
-#### The `plotly` package
+### The `plotly` package
 
 There are two main ways of creating plots using `plotly`: 1. Using the
 package’s functions: `plot_ly`: renders most non-map graphs `plot_geo`
@@ -1521,6 +1368,9 @@ plot_ly(worldcup, type = "scatter",
         x = ~ Time, y = ~ Shots, color = I("darkred"))
 ```
 
+Several elements can be added via the `add_*` functions: `add_histogram`
+`add_lines` `add_markers` `add_paths` `add_polygons` `add_segments`
+
 By default, when the mouse cursor hovers one of the points the
 information displays the variables which are mapped to the aesthetics.
 We can change this via the `add_markers()` function:
@@ -1543,3 +1393,260 @@ worldcup %>%
                              "<b>Team:</b> ", Team),
               hoverinfo = "text")
 ```
+
+`plotly` is designed so data as well as additional plot elements can be
+piped into its functions.
+
+``` r
+worldcup %>% 
+  plot_ly(x ~ Time, y = ~ Shots, color = Position) %>% 
+  add_markers()
+```
+
+For a 3D scatterplot we just need to map a variable to the `z` argument.
+
+``` r
+worldcup %>%
+  plot_ly(x = ~ Time, y = ~ Shots, z = ~ Passes,
+          color = ~ Position, size = I(3)) %>%
+  add_markers()
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-60-1.png)
+
+We can also create a 3D surface object from matrix objects.
+
+``` r
+class(volcano)
+```
+
+    [1] "matrix" "array" 
+
+``` r
+volcano[1:4, 1:4]
+```
+
+         [,1] [,2] [,3] [,4]
+    [1,]  100  100  101  101
+    [2,]  101  101  102  102
+    [3,]  102  102  103  103
+    [4,]  103  103  104  104
+
+``` r
+plot_ly(z = ~ volcano, type = "surface")
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-62-1.png)
+
+The `rangeslider` function adds a zoom slider for the x-axis.
+
+``` r
+read_csv("data/floyd_track.csv") %>%
+  plot_ly(x = ~ datetime, y = ~ max_wind) %>% 
+  add_lines() %>%
+  rangeslider()
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-63-1.png)
+
+A `ggplot2` obect can be transformed into a `plotly` object with the
+`ggplotly()` function:
+
+``` r
+wrldcup_scatter <- worldcup %>% 
+  ggplot(aes(Time, Shots, color = Position)) +
+  geom_point()
+
+ggplotly(wrldcup_scatter)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-64-1.png)
+
+### The `leaflet` package
+
+The `leaflet` package is another JS-based package, which creates
+interactive maps in R. As with the `plotly` package, the outputs are
+only interactive in HTML format, shiny apps and inside RStudio.
+
+As with `ggplot2`, in order to create a plot with `leaflet` we first
+need to initialize a `leaflet` object. To create a map, we need to add
+some map tiles. Additional elements showing the data are added on top
+just like `ggplot2` geoms. Similar to `plotly`, these elements are added
+via the `addMarkers()` and `addCircleMarkers()` functions, which take as
+input data frames as well as spatial objects.
+
+``` r
+denver_fars <- denver_fars %>% filter(longitud < -104.5)
+
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(data = denver_fars, lng = ~ longitud, lat = ~ latitude,
+                   radius = 2)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-65-1.png)
+
+Goggle Maps-style markers are added via the `addMarkers()` function:
+
+``` r
+leaflet() %>%
+  addTiles() %>%
+  addMarkers(data = denver_fars, lng = ~ longitud, lat = ~ latitude)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-66-1.png)
+
+Data points can also be clustered via the `clusterOptions` parameter.
+Hover the cursor over the cluster to highlight the are covered by the
+cluster.
+
+``` r
+leaflet() %>%
+  addTiles() %>%
+  addMarkers(data = denver_fars, 
+                   lng = ~ longitud, lat = ~ latitude,
+                   clusterOptions = markerClusterOptions())
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-67-1.png)
+
+The background map is provided by the tiles added to the `leaflet`
+object. By default the map design is taken from OpenStreetMap. This can
+be changed via the `addProviderTiles()` function. See [the leaflet
+extras GitHub
+repository](https://leaflet-extras.github.io/leaflet-providers/preview/index.html)
+for all available map styles.
+
+``` r
+leaflet() %>%
+  addProviderTiles("Esri.NatGeoWorldMap") %>%
+  addCircleMarkers(data = denver_fars, radius = 2,
+                   lng = ~ longitud, lat = ~ latitude)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-68-1.png)
+
+``` r
+leaflet() %>%
+  addProviderTiles("Esri.WorldImagery") %>%
+  addCircleMarkers(data = denver_fars, radius = 2,
+                   lng = ~ longitud, lat = ~ latitude)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-69-1.png)
+
+Pop-up information (clickable) can be added and formatted using HTML
+code via the `popup` argument:
+
+``` r
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(data = denver_fars, radius = 2, 
+                   lng = ~ longitud, lat = ~ latitude,
+                   popup = ~ paste("<b>Driver age:</b>", age))
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-70-1.png)
+
+To add more compicated pop-up information, it is best to create a
+designated column in the data to reference to.
+
+``` r
+# Add age, date and - where applicable - the measured blood alcohol levels in DUI cases
+denver_fars <- denver_fars %>%
+  mutate(popup_info = paste("<b>Driver age:</b>", age, "<br />",
+                            "<b>Date:</b>", format(date, "%Y-%m-%d"), "<br />",
+                            "<b>Time:</b>", format(date, "%H:%M"), "<br />"),
+         popup_info = ifelse(!is.na(alc_res),
+                             paste(popup_info,
+                                   "<b>Fatalities:</b>", fatals, "<br />"),
+                             popup_info)) 
+
+denver_fars %>%
+  leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(radius = 2, lng = ~ longitud, lat = ~ latitude,
+                   popup = ~ popup_info)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-71-1.png)
+
+To apply color mapping to variables, we need to create a color function
+via `colorFactor()`. We will first create a color palette using the
+`viridis` color scheme and apply it later within the `pal()` call for
+the `color` argument.
+
+``` r
+pal <- colorFactor(viridis(5), denver_fars$drunk_dr)
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(data = denver_fars, radius = 2,
+                   lng = ~ longitud, lat = ~ latitude,
+                   popup = ~ popup_info,
+                   color = ~ pal(drunk_dr)) 
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-72-1.png)
+
+Now that we have successfully applied color mapping we need to create a
+color legend. This is done via the `addLegend` function.
+
+``` r
+pal <- colorFactor(viridis(5), denver_fars$drunk_dr)
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(data = denver_fars, radius = 2,
+                   lng = ~ longitud, lat = ~ latitude,
+                   popup = ~ popup_info,
+                   color = ~ pal(drunk_dr)) %>%
+  addLegend(pal = pal, values = denver_fars$drunk_dr)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-73-1.png)
+
+Polygons can be added in a similar way via the `addPolygons` function.
+We will use the denver_tracts data. Since denver_tracts is a spatial
+object, we no longer need to specify `lng` and `lat` but instead can
+access data using the `@` operator.
+
+``` r
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = denver_tracts, 
+              popup = paste0("Tract ID:  ", denver_tracts@data$NAME))
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-74-1.png)
+
+Now we will combine polygons and points. Additionally, we can extend
+plot customization by allowing the user to choose which layers to
+display via the `addLayerControl`. Therefor, we need to add the `group`
+argument to each layer.
+
+``` r
+pal <- colorFactor(viridis(5), denver_fars$drunk_dr)
+
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = denver_tracts,
+              popup = paste0("Tract ID:  ", denver_tracts@data$NAME),
+              color = "#000000", fillColor = "969696", 
+              weight = 2, group = "tracts") %>%
+  addCircleMarkers(data = denver_fars, lat = ~ latitude, 
+                   lng = ~ longitud, radius = 2,
+                   popup = ~ popup_info, opacity = 0.9,
+                   color = ~ pal(drunk_dr),
+                   group = "accidents") %>%
+  addLegend(pal = pal, values = denver_fars$drunk_dr, opacity = 0.7) %>%
+  addLayersControl(baseGroups = c("base map"), 
+                   overlayGroups = c("tracts", "accidents"))
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-75-1.png)
+
+## Grid graphics
+
+The `grid` package is the underlying architecture for the graphilac
+outputs of `ggplot2`. Grid is a low-level of graphics, i.e. meant to
+modify specific aspects of graphics rather than functions, which produce
+plots. Grid graphics are separate from base R graphics.
