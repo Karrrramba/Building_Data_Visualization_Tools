@@ -1,0 +1,972 @@
+---
+title: "Building Data Visualization Tools"
+format: gfm
+# prefer-html: true
+editor: visual
+---
+
+```{r}
+#| warning: false
+#| output: false
+library(dlnm)
+library(faraway)
+library(ggthemes)
+library(gridExtra)
+library(stringr)
+library(tidyverse)
+library(webshot2)
+```
+```{r}
+#| warning: false
+#| output: false
+data("chicagoNMMAPS")
+data("worldcup")
+```
+
+## Basis plotting with ggplot2
+
+`ggplot` is used to construct the initial ggplot object. It takes a dataset in the form of a data frame as input. There are three patterns used to invoke `ggplot()`
+
+-   `ggolot(data = df, aes(x, y, ...))`
+
+    Uses the same data and aesthetics. Recommended when all layers use the dame data and the same set of aesthetics. Although other data can be added to other layers.
+
+-   `ggplot(data = df)`
+
+    Specifies the base data but no aesthetics. Is best used when all layers are based on the same dataset but individual layers vary in the variables used for their respective aesthetics.
+
+-   `ggplot()`
+
+    Initializes a bare `ggplot` skeleton, with no variable and/or aesthetic mapping. Useful when multiple datasets are used to combine layers.
+
+`ggplot` is very specific about specifying aesthetics inside `aes`.
+
+```{r}
+#| eval: false
+# Good
+ggplot(worldcup, aes(x = Shots, y = Passes))
+
+# Bad
+ggplot(worldcup, x = Shots, y = Passes)
+```
+
+The `data` aargument has to be specified before or with the aesthetics. If no dataset is specified within `ggplot()` but inside another `geom_*` make sure to use the `data` argument as `data` is not the first parameter expected in `geom` calls.
+
+```{r}
+#| eval: false
+# Good
+ggplot(worldcup, aes(x = Shots, y = Passes)) +
+  geom_point()
+
+ggplot(worldcup) +
+  geom_point(aes(x = Shots, y = Passes))
+
+ggplot() +
+  geom_point(data = worldcup, aes(x = Shots, y = Passes))
+
+# Bad
+ggplot() +
+  geom_point(worldcup, aes(x = Shots, y = Passes))
+```
+
+### Saving plots
+
+To save a plot using code in a script, take the following steps: (1) open a graphics device (e.g., using the function `pdf` or `png`) (2) run the code and (3) close the graphics device using the `dev.off` function. Note that the function you use to open a graphics device will depend on the type of device you want to open, but you close all devices with the same function (`dev.off`).
+
+### Geoms
+
+All geom functions have required and accepted aesthetics, e.g. `geom_point` requires `x` and `y`, but the function also accepts `alpha`, `color`, `fill`, `group`, `size`, `shape` and `stroke`.
+
+```{r}
+# Basic scatterplot with required aesthetics only
+ggplot(worldcup, aes(Time, Passes)) +
+  geom_point()
+
+# Avanced visualization of the same data with additional aesthetics arguments
+ggplot(worldcup, aes(Time, Passes,
+                     color = Position,
+                     size = Shots)) +
+  geom_point()
+
+```
+
+Combining several geoms in one plot allows us to create interesting graphs, e.g. by adding highlights.
+
+```{r}
+noteworthy_players <- worldcup %>% filter(Shots == max(Shots) | 
+                                            Passes == max(Passes)) %>%
+  mutate(point_label = paste(Team, Position, sep = ", "))
+
+ggplot(worldcup, aes(x = Passes, y = Shots)) + 
+  geom_point() + 
+  # notice how the additional layer is added from a different df
+  geom_text(data = noteworthy_players, aes(label = point_label), 
+            # Label orientation
+            vjust = "inward", hjust = "inward") 
+```
+
+#### Using constant aesthetics
+
+Instead of mapping an aesthetic to an element of the dataset, we can apply a constant value. To do this, we specify the color aesthetic outside of an `aes` call:
+
+```{r}
+ggplot(worldcup, aes(x = Time, y = Passes)) + 
+  geom_point(color = "darkred")
+```
+
+This can be applied to all geoms, including `fill`, `shape`, and `size`. While `color` are specified by strings, `shape` is specified by a numbere between 1 and 21.
+
+#### Aesthetics inheritance
+
+Once aesthetics are mapped, they are inherited by additional geoms.
+
+```{r}
+ggplot(worldcup, aes(x = Time, y = Passes, color = Position)) + 
+  geom_point() +
+  theme_few()
+```
+
+They can be overridden with the `aes` function inside the new geom.
+
+```{r}
+ggplot(worldcup, aes(x = Time, y = Passes, color = Team)) + 
+  geom_point() +
+  theme_few() +
+  theme(legend.position = "none")
+```
+
+## Guidelines for good plots
+
+The guidelines are:
+
+-   Aim for high data density
+
+-   Use clear, meaningful labels
+
+-   Provide useful references
+
+-   Highlight interesting aspects of the data
+
+-   Consider using small multiples
+
+-   Make order meaningful
+
+### Aim for high data density
+
+The ratio of "ink" to data should be kept as low as possible. Below are two graphs displaying the same amount of information. Notice how the right plot shows the same amount of information with minimal space. Further, the right plot has the background color and grid lines removed.
+
+```{r}
+h <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_col() +
+  ggtitle("1. Lower data quality") +
+  xlab("Number of players") +
+  ylab("")
+
+e <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_classic() + 
+  ggtitle("2. Higher data quality") +
+  xlab("Number of players") +
+  ylab("")
+
+grid.arrange(h, e, ncol = 2)
+```
+
+By increasing the data-to-ink ratio in a plot we ca help the viewers see the data more quickly. A cluttered plot is harder to interpret. Further, we leave some room to add additional data, references and highlights. A major method for decreasing clutter in the plot is choosing the right `theme`. A number of theme functions comes with `ggplot2`: - `theme_linedraw` - `theme_bw` - `theme_minimal` - `theme_void` - `theme_dark` - `theme_classic`
+
+```{r}
+#| echo: false
+
+tl <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_linedraw() + 
+  ggtitle("theme_linedraw") +
+  xlab("Number of players") +
+  ylab("")
+tb <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_bw() + 
+  ggtitle("theme_bw") +
+  xlab("Number of players") +
+  ylab("")
+tm <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_minimal() + 
+  ggtitle("theme_minimal") +
+  xlab("Number of players") +
+  ylab("")
+tv <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_void() + 
+  ggtitle("theme_void") +
+  xlab("Number of players") +
+  ylab("")
+td <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_dark() + 
+  ggtitle("theme_dark") +
+  xlab("Number of players") +
+  ylab("")
+tc <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(n, factor(Position))) +
+  geom_point() +
+  theme_classic() + 
+  ggtitle("theme_classic") +
+  xlab("Number of players") +
+  ylab("")
+
+grid.arrange(tl, tb, tm, tv, td, td, ncol = 2)
+```
+
+Additional themes are available with the `ggthemes` package.
+
+### Use clear, meaningful labels
+
+The default for `ggplot2` is to use column names as axis labels. While this is convenient for exploratory plots, it is not adequate for presentations and publications. For EDA we can stick to short names like "wt", but should use longer, precise labeling for another audience ("Weight \[kg\]"). If variables require longer labels, consider flipping the axes with `coord_flip`.
+
+```{r}
+#| echo: FALSE
+b <- worldcup %>% 
+  rename(Pos = Position) %>% 
+  mutate(Pos = forcats::fct_recode(Pos,
+                          "DC" = "Defender",
+                          "FW" = "Forward",
+                          "GK" = "Goalkeeper",
+                          "MF" = "Midfielder")) %>% 
+  count(Pos) %>% 
+  ggplot(aes(Pos, n)) +
+  geom_col() +
+  ggtitle("Bad")
+  
+g <- worldcup %>% 
+  count(Position) %>% 
+  ggplot(aes(Position, n)) +
+  geom_col(fill = "lightgrey") +
+  ggtitle("Good")+
+  ylab("Number of players") +
+  coord_flip() +
+  ggthemes::theme_tufte()
+
+grid.arrange(b,g, ncol = 2)
+```
+
+Include units of measurement - where relevant - in axis titles or tick marks. The `scale_*` (e.g. `scale_x_continuous`) from the `scales` package offer lots of customization via the `name`, `labels` or `scale` arguments.
+
+```{r}
+worldcup %>% 
+  count(Position) %>% 
+  mutate(total = sum(n),
+         prop = round(n * 100 / total, 2)) %>% 
+  ggplot(aes(Position, prop)) +
+  geom_col(fill = "lightgrey") +
+  scale_y_continuous("Proportion of players", 
+                     labels = scales::label_percent(scale  = 1)) +
+  coord_flip() +
+  ggthemes::theme_tufte()
+```
+
+### Provide useful references
+
+Adding reference values is a great way to present outliers in the data. One way of adding reference is by showing trends and relationships between variables, e.g. by adding a linear or smooth function.
+
+```{r}
+n <- ggplot(worldcup, aes(Passes, Shots)) +
+  geom_point()+
+  ggtitle("No reference") +
+  theme_tufte()
+
+r <- ggplot(worldcup, aes(Passes, Shots)) +
+  geom_point()+
+  geom_smooth(formula = y ~ x, method = "lm") +
+  ggtitle("With reference") +
+  theme_tufte()
+
+grid.arrange(n, r, ncol = 2)
+```
+
+Some considerations for adding references: - Add reference layers first - Add transparency `alpha` - Use neutral colors (greys) - Use non-solid lines (`linetype = 3`)
+
+Other helpful functions for adding references - or highlights - are:
+
+-   `geom_hline` and `geom_vline` for horizontal and vertical lines, respectively
+
+-   `geom_abline` adds a line with an intercept and a slope
+
+-   `geom_rect` adds a filled rectangle
+
+-   `geom_poly` adds a filled polygon
+
+-   `geom_path` adds an empty polygon
+
+```{r}
+h <- ggplot(worldcup, aes(Time, Shots)) +
+  geom_hline(yintercept = c(10, 20), linetype = 3) + 
+  geom_point(shape = 1) +
+  theme_few() +
+  ggtitle("hline")
+
+v <- ggplot(worldcup, aes(Time, Shots)) +
+  geom_vline(xintercept = 400, linetype = 3) + 
+  geom_point(shape = 1) +
+  theme_few() +
+  ggtitle("vline")
+
+a <- ggplot(worldcup, aes(Time, Shots)) +
+  geom_abline(intercept = 0, slope = 0.01, color = "darkred") + 
+  geom_point(shape = 1) +
+  theme_few() +
+  ggtitle("abline")
+
+grid.arrange(h, v, a, ncol = 3)
+```
+
+```{r}
+r <- ggplot(worldcup, aes(Time, Shots)) +
+  geom_rect(xmin = 0, xmax = 595, ymin = 0, ymax = 5, fill = "lightgrey", alpha = 0.8) + 
+  geom_point(shape = 1) +
+  theme_few() +
+  ggtitle("rect")
+
+pl <- ggplot(worldcup, aes(Time, Shots)) +
+  geom_polygon(data = data.frame(x = c(0, 30, 280, 280),
+                                 y = c(0, 5, 5, 0)),
+               aes(x = x, y = y),
+               alpha = 0.8,
+               fill = "darkgrey") + 
+  geom_point(shape = 1) +
+  theme_few() +
+  ggtitle("polygon")
+
+pa <- ggplot(worldcup, aes(Time, Shots)) +
+  geom_path(data = data.frame(x = c(420, 420, 595, 595),
+                                 y = c(16, 28, 28, 16)),
+            aes(x = x, y = y),
+            alpha = 0.5,
+            color = "darkred",
+            linetype = 1,
+            size = 0.7) + 
+  geom_point(shape = 1) +
+  theme_few() +
+  ggtitle("path")
+
+grid.arrange(r, pl, pa, ncol = 2)
+```
+
+Adding test is another great way of highlighting features of the data. Hightlighting layers like `geom_text` often require a designated dataset.
+
+```{r}
+top_players <- worldcup %>% 
+  filter(Passes == max(Passes) | Shots == max(Shots)) %>% 
+  mutate(Name = rownames(.),
+         Label = paste0(Name, Team, sep = ', '))
+
+ggplot(worldcup, aes(Passes, Shots)) +
+  geom_point() +
+  geom_text(data = top_players, aes(label = Label),
+            vjust = "inward", hjust = "inward",
+            color = "darkgreen") +
+  theme_few()
+```
+
+### Use small multiplets
+
+Multiplets are small plots with the same x- and y-axes showing different subsets of the data. They are a great way to de-clutter busy plots.
+
+```{r}
+#| echo: false
+ggplot(worldcup, aes(Time, Shots, color = Position)) + 
+  geom_point() +
+  theme_bw()
+```
+
+```{r}
+ggplot(worldcup, aes(Time, Shots)) + 
+  geom_point() +
+  theme_bw() +
+  facet_grid(. ~ Position)
+```
+
+\`facet_grid\` can facet by either rows or columns, or both.
+
+```{r}
+#| eval: false
+facet_grid([factor for rows] ~ [facet for cloumns])
+```
+
+```{r}
+worldcup %>%
+  filter(Team %in% c("Spain", "Netherlands")) %>%
+  ggplot(aes(x = Time, y = Shots)) + 
+  geom_point() +
+  facet_grid(Team ~ Position) 
+```
+
+While `facet_grid` is best used for two discrete variables and all combinations of the variables are available, `facet_wrap` is best used for one variable with many levels.
+
+```{r}
+worldcup %>%
+  ggplot(aes(x = Time, y = Shots)) + 
+  geom_point(alpha = 0.25) +
+  facet_wrap(~ Team, ncol = 6) 
+```
+
+### Make order meaningful
+
+Using meaningful arrangement of data makes interpretation of plots easier. Here, use the `factor()` function to re-order factor variables and change the ordering via the `levels` variable.
+
+```{r}
+a <- worldcup %>% 
+  group_by(Team) %>% 
+  summarise(Time = mean(Time)) %>% 
+  ggplot(aes(Time, Team)) +
+  geom_point() +
+  theme_few() +
+  xlab("Mean play time per player") +
+  ggtitle("Alphabetical")
+
+b <- worldcup %>% 
+  group_by(Team) %>% 
+  summarise(Time = mean(Time)) %>% 
+  arrange(Time) %>% 
+  mutate(Team = factor(Team, levels = Team)) %>% 
+  ggplot(aes(Time, Team)) +
+  geom_point() +
+  theme_few() +
+  xlab("Mean play time per player")+
+  ggtitle("Meaningful")
+
+grid.arrange(a, b, ncol = 2)
+```
+
+We can also use a variable of interest to order multiplets. Here, we use the average number of shots taken to order player positions.
+
+```{r}
+worldcup %>%
+  select(Position, Time, Shots) %>%
+  group_by(Position) %>%
+  mutate(avg_shots = mean(Shots),
+         most_shots = Shots == max(Shots)) %>%
+  ungroup() %>%
+  arrange(avg_shots) %>%
+  mutate(Position = factor(Position, levels = unique(Position))) %>%
+  ggplot(aes(x = Time, y = Shots, color = most_shots)) + 
+  geom_point(alpha = 0.5) + 
+  scale_color_manual(values = c("TRUE" = "green", "FALSE" = "black"),
+                     guide = FALSE) + 
+  facet_grid(. ~ Position) + 
+  theme_few()
+```
+
+```{r}
+worldcup %>%
+  select(Team, Time) %>%
+  group_by(Team) %>%
+  mutate(t_avg = mean(Time),
+                t_min = min(Time),
+                t_max = max(Time)) %>%
+  arrange(t_avg) %>%
+  ungroup() %>%
+  mutate(Team = factor(Team, levels = unique(Team))) %>%
+  ggplot(aes(Time, Team)) + 
+  geom_segment(aes(x = t_min, xend = t_max, yend = Team),
+               alpha = 0.5, color = "gray") + 
+  geom_point(alpha = 0.5) + 
+  geom_point(aes(x = t_avg), size = 2, color = "red", alpha = 0.5) + 
+  theme_minimal() + 
+  ylab("")
+```
+
+## Colors and scales
+
+## Mapping
+
+```{r}
+library(choroplethr)
+library(maps)
+library(viridis)
+# library(ggmap)
+```
+
+The most basic way of mapping is by assigning longitude to the x aesthetic and ltitude to the y aesthetic. `ggplot` includes a few dataset, which can be accessed with the `map_data` function.
+
+```{r}
+us_map <- map_data("state")
+head(us_map)
+```
+
+```{r}
+us_map %>% 
+  filter(region == "michigan") %>% 
+  ggplot(aes(long, lat)) +
+  geom_point() +
+  theme_void()
+```
+
+Using lines requires a `group` aesthetic otherwise all line will be connected
+
+```{r}
+us_map %>% 
+  filter(region == "michigan") %>% 
+  ggplot(aes(long, lat)) +
+  geom_path() +
+  theme_void()
+```
+
+```{r}
+us_map %>% 
+  filter(region == "michigan") %>% 
+  ggplot(aes(long, lat, group = group)) +
+  geom_path() +
+  theme_void()
+```
+
+`geom_path` is the preferred geom over `geom_line` for drawing maps because `geom_path` connects the x-axis values based on their order in the data frame.`geom_line` connects x-axis values by their order on the axis - which is great for statistical graphs.
+
+`geom_polygon` can bu used to apply color fill to map areas within their borders.
+
+```{r}
+us_map %>% 
+  filter(region == "michigan") %>% 
+  ggplot(aes(long, lat, group = group)) +
+  geom_polygon(fill = "skyblue", color = "blue") +
+  theme_void()
+```
+
+To make a choropleth map we can use the `viridis` package and map a continuous variable to the `scale_fill_viridis` function.
+
+```{r}
+data(votes.repub)
+head(votes.repub)
+```
+
+```{r}
+votes.repub %>%
+  as_tibble() %>%
+  mutate(state = rownames(votes.repub),
+         state = tolower(state)) %>%
+  right_join(us_map, by = c("state" = "region")) %>%
+  ggplot(aes(x = long, y = lat, group = group, fill = `1968`)) +
+  geom_polygon(color = "black") + 
+  theme_void() + 
+  scale_fill_viridis(name = "Republican\nvotes [%]")
+```
+
+```{r}
+#| echo: false
+#| eval: false
+# The datasets withing `map_data` cover only select locations. The `ggmap` package uses the Google Maps API and allows to overlay maps with points, polygons, lines, etc.
+# Base Google Maps can be accessed via the `get_map` function. 
+```
+
+### Spatial objects
+
+```{r}
+#| warning: false
+#| output: false
+library(tigris)
+library(sp)
+```
+
+Geographic data is often stored in spatial objects:
+
+-   `SpacialPolygons`
+
+-   `SpatialPoints`
+
+-   `SpatialLines`
+
+-   `SpatialPolygonsDataFrame`
+
+-   `SpatialPointsDataFrame`
+
+-   `SpatialLinessDataFrame`
+
+The `tigris` package pulls spatial data from the US Census. Results can be specified with the `state` and `county` parameters, while `cb = FALSE` can be set for a low resolution file.
+
+```{r}
+#| output: false
+#| warning: false
+denver_tracts <- tracts(state = "CO", county = 31, cb = TRUE, 
+                        class = "sp")
+```
+
+```{r}
+plot(denver_tracts)
+```
+
+The `bbox` function retrieves the longitude and latitude of the bounding box.
+
+```{r}
+bbox(denver_tracts)
+```
+
+If the object is a dataframe, we can access it with the `@` operator.
+
+```{r}
+class(denver_tracts)
+
+head(denver_tracts@data)
+```
+
+Just like with `ggplot` geoms, spatial objects can be layered over one another. To do that we can set `add = TRUE` in the added layer.
+
+```{r}
+#| echo: false
+roads <- primary_roads()
+```
+
+```{r}
+#| warning: false
+plot(denver_tracts, col = "lightgrey")
+plot(roads, col = "darkred", add = TRUE)
+```
+
+With the `sp` package data stored in data frames can be converted into spatial objects. For using spatial objects with `ggplot2` we can convert them with the `tidy` function from the `broom` package.
+
+```{r}
+denver_tracts_df <- broom::tidy(denver_tracts)
+
+denver_tracts_df %>% 
+  select(1:4) %>% 
+  slice(1:5)
+```
+
+```{r}
+ggplot(denver_tracts_df, aes(long, lat, group = group)) +
+  geom_polygon(fill = "lightgrey", color = "black") +
+  theme_void()
+```
+
+#### Coordinate reference systems
+
+Coordinate Reference Systems(CRS) specify how coordinates are laid-out on a 2D map: as longitude and latitude (WGS84) or projected (NADS83, UTM). These systems are not mutually compatible so it is important to check which system is used by a spatial object. Every spatial object has a CRS attribute which can be called with the `proj4string` function.
+
+```{r}
+proj4string(denver_tracts)
+```
+
+When creating a spatial object from a data frame, a CRS needs to be assigned.
+
+```{r}
+#| eval: false
+# NOTE: This does not create a projection or re-project data!!!
+proj4string(new_spatial_object_from_df) <- "+proj=longlat +datum=NAD83"
+```
+
+To create a CRS class object we can use the `CRS()` function from the `sp` package.
+
+```{r}
+CRS("+proj=longlat +datum=NAD27")
+```
+
+The `spTransform` function from of the `rgdal` package can be used to change a spatial object's CRS.
+
+```{r}
+#| eval: false
+a_spatial_object <- spTransform(a_spatial_object,
+                                 CRS = CRS("+init=epsg:4267"))
+
+# Align the CRS of two objects
+a_spatial_object <- spTransform(a_spatial_object,
+                                 CRS = proj4string(another_sp_object))
+```
+
+With `mapproj`'s `coord_map()` function we can change the way maps are projected in a `ggplot` object.
+
+```{r}
+library(mapproj)
+
+usmap <- map_data("state") %>%
+  ggplot(aes(long, lat, group = group)) +
+  geom_polygon(fill = "white", colour = "black")
+
+map_1 <- usmap + coord_map() + ggtitle("default") 
+map_2 <- usmap + coord_map("gilbert") + ggtitle("+ coord_map('gilbert')")
+map_3 <- usmap + coord_map("conic", lat0 = 30) + 
+  ggtitle("+ coord_map('conic', lat0 = 30)")
+
+grid.arrange(map_1, map_2, map_3, ncol = 1)
+```
+
+#### Shapefiles
+
+Shapefiles are non-R-specific data, which are not constricted to just geographic information but can also contain additional information, e.g. the population. The `rgdal` package enables R to read shapefiles with the `readOGR()` function. This can also be achieved with the `readShape*()` functions from the `maptools` package. Shapefiles imported in this way are transformed into spatial objects. Spatial objects created in R can be transformed into shapefiles with the `rgdal::writeOGR()` function.
+
+#### R as Gographic Information System (GIS)
+
+R can be used to perform a number of GIS tasks like: Clipping Counting points in polygons Measuring areas in polygons
+
+```{r}
+load("data/fars_colorado.RData")
+
+driver_data[1:5, 1:9]
+```
+
+```{r}
+#| warning: false
+map_data("county", region = "Colorado") %>%
+  ggplot(aes(x = long, y = lat, group = subregion)) + 
+  geom_polygon(color = "gray", fill = NA) + 
+  theme_void() + 
+  geom_point(data = driver_data,
+             aes(x = longitud, y = latitude, group = NULL),
+             alpha = 0.5, size = 0.7) 
+```
+
+Since the recorded accidents in the FARS data are linked to counties we can use this information for grouping. Based on the county-grouped values we can create a choropleth map.
+
+```{r}
+library(choroplethrMaps)
+
+county_accidents <- driver_data %>%
+  mutate(county = stringr::str_pad(county, width = 3,
+                          side = "left", pad = "0")) %>% 
+  tidyr::unite(region, state, county, sep = "") %>% 
+  group_by(region) %>%
+  summarize(value = n(), .groups = "drop") %>%
+  mutate(region = as.numeric(region))
+
+county_choropleth(county_accidents, state_zoom = "colorado")
+```
+
+We can also create choropleth maps based on the count of points in a polygon. To achieve this we will use the polygons from the US Census data.
+
+```{r}
+denver_fars <- driver_data %>% filter(county == 31)
+
+# Create spatial object
+denver_fars_sp <- denver_fars
+coordinates(denver_fars_sp) <- c("longitud", "latitude")
+proj4string(denver_fars_sp) <- CRS("+proj=longlat +datum=NAD27")
+
+# Align CRS for both, points and polygon data
+denver_tracts_proj <- spTransform(denver_tracts, CRS("+init=epsg:26954"))
+denver_fars_proj <- spTransform(denver_fars_sp, CRS(proj4string(denver_tracts_proj)))
+```
+
+```{r}
+plot(denver_tracts_proj)
+plot(denver_fars_proj, add = TRUE, col = "red", pch = 1)
+```
+
+## htmlWidgets
+
+NOTE: The interactive versions of the maps are available in the HTML version. This document contains only snapshots of the interactive plots.
+
+```{r}
+#| output: false
+library(plotly)
+library(leaflet)
+```
+
+There are several R packages which can create interactive graphics based on JavaScript: `leaflet`: Mapping `plotly`: Various plots (including maps) `network3D`: Network data `d3heatmap`: Heatmaps `DT`: Data tables `Diagrammr`: Diagrams and flowcharts
+
+Note: Outputs will only be interactive when created as HTML documents, included in Shiny apps, or inside RStudio's Viewer panel.
+
+### The `plotly` package
+
+There are two main ways of creating plots using `plotly`: 1. Using the package's functions: `plot_ly`: renders most non-map graphs `plot_geo` and `plot_mapbax`: mapping 2. Use the `ggplotly` function to convert a `ggplot` object into a `plotly` object
+
+The `plotly` syntax deviates from that of `ggplot2` as it uses the `~` operator to indicate columns.
+
+```{r}
+#| warning: false
+#| eval: false
+library(plotly)
+
+plotly::plot_ly(worldcup, type = "scatter",
+                x = ~ Time, y = ~ Shots, color = ~Position)
+```
+
+For constant values in the aesthetics we need to use the `I()` function.
+
+```{r}
+#| eval: false
+plot_ly(worldcup, type = "scatter",
+        x = ~ Time, y = ~ Shots, color = I("darkred"))
+```
+
+Several elements can be added via the `add_*` functions: `add_histogram` `add_lines` `add_markers` `add_paths` `add_polygons` `add_segments`
+
+By default, when the mouse cursor hovers one of the points the information displays the variables which are mapped to the aesthetics. We can change this via the `add_markers()` function:
+
+```{r}
+#| eval: false
+worldcup %>%
+  mutate(Name = rownames(worldcup),
+         Label = paste0(Name, ", ", Team)) %>%
+  plot_ly(x = ~ Time, y = ~ Shots, color = ~ Position) %>%
+  add_markers(text = ~ Label, hoverinfo = "text")
+```
+
+We can also add HMTL style code to further customize the labels:
+
+```{r}
+#| eval: false
+worldcup %>%
+  mutate(Name = rownames(worldcup)) %>%
+  plot_ly(x = ~ Time, y = ~ Shots, color = ~ Position) %>%
+  add_markers(text = ~ paste("<b>Name:</b> ", Name, "<br />", 
+                             "<b>Team:</b> ", Team),
+              hoverinfo = "text")
+```
+
+`plotly` is designed so data as well as additional plot elements can be piped into its functions.
+
+```{r}
+#| eval: false
+worldcup %>% 
+  plot_ly(x ~ Time, y = ~ Shots, color = Position) %>% 
+  add_markers()
+```
+
+For a 3D scatterplot we just need to map a variable to the `z` argument.
+
+```{r}
+worldcup %>%
+  plot_ly(x = ~ Time, y = ~ Shots, z = ~ Passes,
+          color = ~ Position, size = I(3)) %>%
+  add_markers()
+```
+
+We can also create a 3D surface object from matrix objects.
+
+```{r}
+class(volcano)
+
+volcano[1:4, 1:4]
+```
+
+```{r}
+plot_ly(z = ~ volcano, type = "surface")
+```
+
+The `rangeslider` function adds a zoom slider for the x-axis.
+
+```{r}
+#| message: false
+#| warning: false
+read_csv("data/floyd_track.csv") %>%
+  plot_ly(x = ~ datetime, y = ~ max_wind) %>% 
+  add_lines() %>%
+  rangeslider()
+```
+
+A `ggplot2` obect can be transformed into a `plotly` object with the `ggplotly()` function:
+
+```{r}
+wrldcup_scatter <- worldcup %>% 
+  ggplot(aes(Time, Shots, color = Position)) +
+  geom_point()
+
+ggplotly(wrldcup_scatter)
+```
+
+### The `leaflet` package
+
+The `leaflet` package is another JS-based package, which creates interactive maps in R. As with the `plotly` package, the outputs are only interactive in HTML format, shiny apps and inside RStudio.
+
+As with `ggplot2`, in order to create a plot with `leaflet` we first need to initialize a `leaflet` object. To create a map, we need to add some map tiles. Additional elements showing the data are added on top just like `ggplot2` geoms. Similar to `plotly`, these elements are added via the `addMarkers()` and `addCircleMarkers()` functions, which take as input data frames as well as spatial objects.
+
+```{r}
+denver_fars <- denver_fars %>% filter(longitud < -104.5)
+
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(data = denver_fars, lng = ~ longitud, lat = ~ latitude,
+                   radius = 2)
+```
+
+Goggle Maps-style markers are added via the `addMarkers()` function:
+
+```{r}
+leaflet() %>%
+  addTiles() %>%
+  addMarkers(data = denver_fars, lng = ~ longitud, lat = ~ latitude)
+```
+
+Data points can also be clustered via the `clusterOptions` parameter. Hover the cursor over the cluster to highlight the are covered by the cluster.
+
+```{r}
+leaflet() %>%
+  addTiles() %>%
+  addMarkers(data = denver_fars, 
+                   lng = ~ longitud, lat = ~ latitude,
+                   clusterOptions = markerClusterOptions())
+```
+
+The background map is provided by the tiles added to the `leaflet` object. By default the map design is taken from OpenStreetMap. This can be changed via the `addProviderTiles()` function. See [the leaflet extras GitHub repository](https://leaflet-extras.github.io/leaflet-providers/preview/index.html) for all available map styles.
+
+```{r}
+leaflet() %>%
+  addProviderTiles("Esri.NatGeoWorldMap") %>%
+  addCircleMarkers(data = denver_fars, radius = 2,
+                   lng = ~ longitud, lat = ~ latitude)
+```
+
+```{r}
+leaflet() %>%
+  addProviderTiles("Esri.WorldImagery") %>%
+  addCircleMarkers(data = denver_fars, radius = 2,
+                   lng = ~ longitud, lat = ~ latitude)
+```
+
+Pop-up information (clickable) can be added and formatted using HTML code via the `popup` argument:
+```{r}
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(data = denver_fars, radius = 2, 
+                   lng = ~ longitud, lat = ~ latitude,
+                   popup = ~ paste("<b>Driver age:</b>", age))
+```
+
+To add more compicated pop-up information, it is best to create a designated column in the data to reference to.
+```{r}
+# Add age, date and - where applicable - the measured blood alcohol levels in DUI cases
+denver_fars <- denver_fars %>%
+  mutate(popup_info = paste("<b>Driver age:</b>", age, "<br />",
+                            "<b>Date:</b>", format(date, "%Y-%m-%d"), "<br />",
+                            "<b>Time:</b>", format(date, "%H:%M"), "<br />"),
+         popup_info = ifelse(!is.na(alc_res),
+                             paste(popup_info,
+                                   "<b>Fatalities:</b>", fatals, "<br />"),
+                             popup_info)) 
+
+denver_fars %>%
+  leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(radius = 2, lng = ~ longitud, lat = ~ latitude,
+                   popup = ~ popup_info)
+```
+
+To apply color mapping to variables, we need to create a color function via `colorFactor()`. We will first create a color palette using the `viridis` color scheme and apply it later within the `pal()` call for the `color` argument.
+```{r}
+pal <- colorFactor(viridis(5), denver_fars$drunk_dr)
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(data = denver_fars, radius = 2,
+                   lng = ~ longitud, lat = ~ latitude,
+                   popup = ~ popup_info,
+                   color = ~ pal(drunk_dr)) 
+```
+
+Now that we have successfully applied color mapping we need to create a color legend. This is done via the `addLegend` function.
+```{r}
+
+```
+
