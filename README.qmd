@@ -967,6 +967,43 @@ leaflet() %>%
 
 Now that we have successfully applied color mapping we need to create a color legend. This is done via the `addLegend` function.
 ```{r}
+#| warning: false
+pal <- colorFactor(viridis(5), denver_fars$drunk_dr)
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(data = denver_fars, radius = 2,
+                   lng = ~ longitud, lat = ~ latitude,
+                   popup = ~ popup_info,
+                   color = ~ pal(drunk_dr)) %>%
+  addLegend(pal = pal, values = denver_fars$drunk_dr)
+```
 
+Polygons can be added in a similar way via the `addPolygons` function. We will use the denver_tracts data. Since denver_tracts is a spatial object, we no longer need to specify `lng` and `lat` but instead can access data using the `@` operator. 
+```{r}
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = denver_tracts, 
+              popup = paste0("Tract ID:  ", denver_tracts@data$NAME))
+```
+
+Now we will combine polygons and points. Additionally, we can extend plot customization by allowing the user to choose which layers to display via the `addLayerControl`. Therefor, we need to add the `group` argument to each layer.
+```{r}
+#| warning: false
+pal <- colorFactor(viridis(5), denver_fars$drunk_dr)
+
+leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = denver_tracts,
+              popup = paste0("Tract ID:  ", denver_tracts@data$NAME),
+              color = "#000000", fillColor = "969696", 
+              weight = 2, group = "tracts") %>%
+  addCircleMarkers(data = denver_fars, lat = ~ latitude, 
+                   lng = ~ longitud, radius = 2,
+                   popup = ~ popup_info, opacity = 0.9,
+                   color = ~ pal(drunk_dr),
+                   group = "accidents") %>%
+  addLegend(pal = pal, values = denver_fars$drunk_dr, opacity = 0.7) %>%
+  addLayersControl(baseGroups = c("base map"), 
+                   overlayGroups = c("tracts", "accidents"))
 ```
 
