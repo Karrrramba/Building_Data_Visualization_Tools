@@ -1,0 +1,74 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+graphics: yes
+---
+
+## Grid graphics
+
+The `grid` package is a base package, i.e. does not need to be installed, but it need to be loaded with a `library()` call. It is the underlying architecture for the graphilac outputs of `ggplot2`. Grid is a low-level of graphics, i.e. meant to modify specific aspects of graphics rather than functions, which produce plots. Grid graphics are separate from base R graphics. Almost any plot (or geom) can be created with grid graphics. However, `ggplot2` is more time efficient.
+
+### Graphical objects (grobs)
+
+Grobs are graphical objects created with grid graphics functions. They can be added to or taken away from larger grid graphics objects, like `ggplot2` plots. The `grid` package offers a family of `*grob` functions that can create many elements like: `circleGrob` `legendGrob` `linesGrob` `polygonGrob` `rasterGrob` `rectGrob` `segmentGrob` `xaxisGrob` `yaxisGrob`
+
+The `sp` parameter inside these functions specifies the graphical aesthetics parameters like color, fill, line type, line width, etc. These are specified in a `gpar` object. The parameters which can be specified inside the `gpar` object are: `alpha`: transparency `col`: color `fill`: fill `fontface`, `fontstyle`, `fontsize`: font elements `lineend`: line end style `linejoin`: line join style `lty`: line type `lwd`: line width
+
+Additional grobs can be added by other packages, e.g. `tableGrob` from `gridExtra`.
+
+```{r}
+library(grid)
+library(ggplot2)
+
+library(faraway)
+data("worldcup")
+```
+
+```{r}
+#| fig-show: asis
+basic_circle <-  circleGrob(x = 0.5, y = 0.5, r = 0.5, 
+                            gp = gpar(col =  "darkred", lty = 3))
+```
+
+```{r}
+grid.draw(basic_circle)
+```
+By default, the grob will fill out the graphics device and is centered in the middle of the plot.
+
+Grobs can be edited via the `grid.edit()` function.
+```{r}
+my_circle <- circleGrob(name = "my_circle",
+                        x = 0.5, y = 0.5, r = 0.5,
+                        gp = gpar(col = "gray", lty = 3))
+grid.draw(my_circle)
+
+my_rect <- rectGrob(x = 0.5, y = 0.5, width = 0.8, height = 0.3)
+grid.draw(my_rect)
+```
+
+```{r}
+grid.edit("my_circle", gp = gpar(col = "red", lty = 1))
+```
+
+Since `ggplot` objects integrate well into `grid` graphics tools, they can be combined.
+```{r}
+wrldcp_scatter <- ggplot(worldcup, aes(Time, Passes)) +
+  geom_point()
+
+grid.draw(wrldcp_scatter)
+grid.draw(my_circle)
+```
+
+This integration also allows us to alter any `ggplot` object. To do this, we first need to produce the ggplot output, list all the elements of the object with the calls to `ggrid.force()` and `grid.ls()`, and lastly change the element via the `grid.edit()` function. 
+```{r}
+wrldcp_scatter
+grid.force()
+grid.ls()
+```
+```{r}
+grid.edit("geom_point.points.56", gp = gpar(col = "darkred"))
+```
+
+### Grob arranegment with `gridExtra`
+Packages like `gridExtra` provide additional grobs like `tableGrob`.
