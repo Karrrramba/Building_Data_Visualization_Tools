@@ -1,0 +1,59 @@
+---
+title: "building_ggplot_themes"
+author: "Michal Rackiewicz"
+format: gfm
+editor: visual
+graphics: yes
+execute: 
+  warning: false
+  error: false
+---
+
+## Building New Themes
+```{r}
+#| output: false
+library(ggplot2)
+library(faraway)
+
+data("worldcup")
+```
+
+With the \`ggplot2\` package a theme object is used to store the modifications of several elements of a plot. Note that a \`theme\` object stores only non-data elements of a plot. By default \`ggplot2\` uses the \`theme_gray\`, a gray background with white grid lines.
+Modifying an existing theme can be achieved via the `theme` function. We can wrap the attributes we want to modify inside one of the `element_*` functions:
+`element_blank`: nothing
+`element_line`: lines/axes
+`element_rect`: borders and backgrounds
+`element_text`: text elements
+
+We will start with `theme_bw` and make some changes.
+```{r}
+wrldcp_scatter <- ggplot(data = worldcup, aes(Time, Shots)) +
+  geom_point() +
+  ggtitle("World Cup Scatterplot")
+
+wrldcp_scatter + theme_bw()
+```
+
+```{r}
+new_theme <- theme_bw() + theme(plot.title = element_text(color = "darkred"))
+
+wrldcp_scatter + new_theme
+```
+To make further changes, we can inspect the elements of the `new_theme`:
+```{r}
+head(new_theme)
+```
+The elements of a theme are stored in a list, so we can access each element via the `$` operator. We will make changes to the attributes of the `panel.background` and the `panel.border`. First we will take a look at their respective default values. 
+```{r}
+new_theme$panel.background
+new_theme$panel.border
+
+new_theme <- new_theme +
+  theme(panel.background = element_rect(fill = "lightgrey"),
+        panel.border = element_rect(colour = "darkred", linewidth = 2))
+```
+```{r}
+#| echo: false
+wrldcp_scatter + new_theme
+```
+
