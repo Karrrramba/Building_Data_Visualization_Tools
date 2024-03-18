@@ -1,0 +1,171 @@
+---
+title: "Building Ggplot2 Themes and Geoms"
+author: "Michal Rackiewicz"
+format: gfm
+editor: visual
+graphics: yes
+execute: 
+  warning: false
+  error: false
+---
+
+## Building New Themes
+```{r}
+#| output: false
+library(dplyr)
+library(ggplot2)
+library(grid)
+library(faraway)
+library(magrittr)
+
+data("worldcup")
+```
+
+With the \`ggplot2\` package a theme object is used to store the modifications of several elements of a plot. Note that a \`theme\` object stores only non-data elements of a plot. By default \`ggplot2\` uses the \`theme_gray\`, a gray background with white grid lines.
+Modifying an existing theme can be achieved via the `theme` function. We can wrap the attributes we want to modify inside one of the `element_*` functions:
+`element_blank`: nothing
+`element_line`: lines/axes
+`element_rect`: borders and backgrounds
+`element_text`: text elements
+
+We will start with `theme_bw` and make some changes.
+```{r}
+wrldcp_scatter <- ggplot(data = worldcup, aes(Time, Shots)) +
+  geom_point() +
+  ggtitle("World Cup Scatterplot")
+
+wrldcp_scatter + theme_bw()
+```
+
+```{r}
+new_theme <- theme_bw() + theme(plot.title = element_text(color = "darkred"))
+
+wrldcp_scatter + new_theme
+```
+To make further changes, we can inspect the elements of the `new_theme`:
+```{r}
+head(new_theme)
+```
+The elements of a theme are stored in a list, so we can access each element via the `$` operator. We will make changes to the attributes of the `panel.background` and the `panel.border`. First we will take a look at their respective default values. 
+```{r}
+new_theme$panel.background
+new_theme$panel.border
+
+new_theme <- new_theme +
+  theme(panel.background = element_rect(fill = "lightgrey"),
+        panel.border = element_rect(colour = "darkred", linewidth = 2))
+```
+```{r}
+#| echo: false
+wrldcp_scatter + new_theme
+```
+## Building New Geoms
+Building a geom is a two step process.
+Construct a new class specifying the attributes and functions of the new geom via the `ggproto()` function. All classes inherit from the `Geom` class.
+From this, the new `geom_*`function is constructed and can be used to create a layer to a ggplot object.
+
+The basic structure of the new class looks like this:
+```{r}
+#| eval: false
+GeomNewPoint <- ggproto("GeomNewPoint", Geom,
+        required_aes = c("x", "y"), #a character vector of required aesthetics
+        default_aes = aes(shape = 1, color = "black"), #default values for certain aesthetics
+        draw_key = draw_key_point,
+        #a function used to draw the key in the legend. 
+        # specified by a draw_key_* function
+        draw_panel = function(data, panel_scales, coord) {
+                ## Function that returns a grid grob that will 
+                ## be plotted (this is where the real work occurs)
+          coords <- coord$transform(data, panel_scales)
+          
+          # Print structure 
+          str(coords)
+          print(summary(coords))
+          
+          # Construct grid grob
+          pointsGrob(
+            x = coords$x,
+            y = coords$y,
+            pch = coords$shape
+          )
+        }
+)
+```
+The `draw_panel`function has three arguments:
+`data`: specifies the data frame containing the columns mapped to each of the aesthetics specified
+`panel_scales`: list describing the x and y scales
+`coord`: describes the coordinate system of the plot
+
+Now we will write the function, which uses the new class to add a layer to a `ggplot` object.
+```{r}
+geom_newpoint <- function(mapping = NULL, data = NULL, stat = "identity",
+                         position = "identity", na.rm = FALSE, 
+                         show.legend = NA, inherit.aes = TRUE, ...) {
+        ggplot2::layer(
+                geom = GeomNewPoint, mapping = mapping,  
+                data = data, stat = stat, position = position, 
+                show.legend = show.legend, inherit.aes = inherit.aes,
+                params = list(na.rm = na.rm, ...)
+        )
+}
+```
+
+Now when we apply the geom to a `ggplot` object we also print the `coords` object:
+```{r}
+ggplot(worldcup, aes(Time, Shots)) +
+  geom_newpoint()
+```
+As we can see from the summary, x and y values have been scaled to be between 0 and 1. 
+
+The new geom can be improved by adding automated transparency based on the density of the displayed points. We want to scale point transparency with the number of points displayed. 
+```{r}
+GeomAutoTransparent <- ggproto("GeomAutoTransparent", Geom,
+        required_aes = c("x", "y"),
+        default_aes = aes(shape = 19),
+        draw_key = draw_key_point,
+        draw_panel = function(data, panel_scales, coord) {
+                ## Transform the data first
+                coords <- coord$transform(data, panel_scales)
+                
+                ## Compute the alpha transparency factor based on the
+                ## number of data points being plotted
+                n <- nrow(data)
+                if(n > 100 && n <= 200)
+                        coords$alpha <- 0.3
+                else if(n > 200)
+                        coords$alpha <- 0.15
+                else
+                        coords$alpha <- 1
+                ## Construct a grid grob
+                grid::pointsGrob(
+                        x = coords$x,
+                        y = coords$y,
+                        pch = coords$shape,
+                        gp = grid::gpar(alpha = coords$alpha)
+                )
+        })
+
+geom_transparent <- function(mapping = NULL, data = NULL, stat = "identity",
+                         position = "identity", na.rm = FALSE, 
+                         show.legend = NA, inherit.aes = TRUE, ...) {
+        ggplot2::layer(
+                geom = GeomAutoTransparent, mapping = mapping,  
+                data = data, stat = stat, position = position, 
+                show.legend = show.legend, inherit.aes = inherit.aes,
+                params = list(na.rm = na.rm, ...)
+        )
+}
+```
+
+```{r}
+ggplot(worldcup, aes(Time, Shots)) +
+  geom_transparent()
+```
+The transparency should decrease when we reduce the number of data points displayed.
+```{r}
+worldcup %>% 
+  ggplot(aes(Time, Shots)) +
+  facet_wrap(~ Position, ncol = 2) +
+  geom_transparent() 
+```
+## Building a Stat
