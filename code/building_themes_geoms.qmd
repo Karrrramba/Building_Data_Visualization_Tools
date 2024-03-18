@@ -12,6 +12,7 @@ execute:
 ## Building New Themes
 ```{r}
 #| output: false
+library(datasets)
 library(dplyr)
 library(ggplot2)
 library(grid)
@@ -19,6 +20,7 @@ library(faraway)
 library(magrittr)
 
 data("worldcup")
+data("airquality")
 ```
 
 With the \`ggplot2\` package a theme object is used to store the modifications of several elements of a plot. Note that a \`theme\` object stores only non-data elements of a plot. By default \`ggplot2\` uses the \`theme_gray\`, a gray background with white grid lines.
@@ -145,14 +147,24 @@ GeomAutoTransparent <- ggproto("GeomAutoTransparent", Geom,
                 )
         })
 
-geom_transparent <- function(mapping = NULL, data = NULL, stat = "identity",
-                         position = "identity", na.rm = FALSE, 
-                         show.legend = NA, inherit.aes = TRUE, ...) {
+geom_transparent <- function(mapping = NULL, 
+                             data = NULL, 
+                             stat = "identity",
+                             position = "identity",
+                             ...,
+                             na.rm = FALSE,
+                             show.legend = NA, 
+                             inherit.aes = TRUE) {
         ggplot2::layer(
-                geom = GeomAutoTransparent, mapping = mapping,  
-                data = data, stat = stat, position = position, 
-                show.legend = show.legend, inherit.aes = inherit.aes,
-                params = list(na.rm = na.rm, ...)
+                geom = GeomAutoTransparent, 
+                mapping = mapping,  
+                data = data, 
+                stat = stat, 
+                position = position, 
+                show.legend = show.legend, 
+                inherit.aes = inherit.aes,
+                params = list(na.rm = na.rm, 
+                              ...)
         )
 }
 ```
@@ -168,4 +180,77 @@ worldcup %>%
   facet_wrap(~ Position, ncol = 2) +
   geom_transparent() 
 ```
+Incorporating the computation of the density metric inside a geom rather then computing it for each position offers the advantage that it is done automatically - irrespective of the grouping variable we choose. Also, this approach does not add any new columns to the data frame.
+
 ## Building a Stat
+Computations can also be implemented in a *stat*, separating them from the `Geom` class.
+A `Stat` class is created in a similar fashion as `Geoms`:
+First, a new `Stat` class is created via the `ggproto()` function. Analogous to `geoms`, the new class inherits from the `Stat` class.
+In a second step a new `stat_*` function is defined, which uses the new class.
+```{r}
+#| eval: false
+StatNEW <- ggproto("StatNEW", Stat,
+                   compute_group = <a function that does computations>,
+                   # The `ompute_group parameter must return a data frame 
+                   # for ggplot2 to refer to.
+                   default_aes = aes(<default values for certain aesthetics>),
+                   required_aes = <a character vector of required aesthetics>)
+```
+
+We can build a stat that computes the 95% confidence interval and present it in a format that can be used by `geom_segment`.
+`Geom_segment` requires the `x`, `y`, `xend` and `yend` parameters, so we need to include those. 
+```{r}
+StatConfint <- ggproto("StatConfint", Stat,
+                       compute_group = function(data, scales) {
+                               ## Compute the line segment endpoints
+                               x <- data$x
+                               xend <- data$x
+                               y <- data$y - 1.96 * data$stderr
+                               yend <- data$y + 1.96 * data$stderr
+                               
+                               ## Return a new data frame
+                               data.frame(x = x, xend = xend,
+                                          y = y, yend = yend)
+                       },
+                       required_aes = c("x", "y", "stderr")
+)
+
+stat_confint<- function(mapping = NULL, data = NULL, geom = "segment",
+                           position = "identity", na.rm = FALSE, 
+                           show.legend = NA, inherit.aes = TRUE, ...) {
+        ggplot2::layer(
+                stat = StatConfInt, 
+                data = data, 
+                mapping = mapping, 
+                geom = geom, 
+                position = position, 
+                show.legend = show.legend, 
+                inherit.aes = inherit.aes,
+                params = list(na.rm = na.rm, ...)
+        )
+}
+```
+
+Now we want to plot the mean ozone values by month from the `airquality` dataset. We also calculate the standard error (SE) from which we later construct the confidence intervals.
+```{r}
+monthly_airqual <- airquality %>% 
+  filter(!is.na(Ozone)) %>% 
+  group_by(Month) %>% 
+  mutate(SD = sd(Ozone)) %>% 
+  summarise(Ozone = mean(Ozone),
+            SampleSize = n(),
+            SE = mean(SD) / sqrt(SampleSize))
+
+ggplot(monthly_airqual, aes(Month, Ozone)) +
+  geom_point() 
+```
+Now we construct the CI.
+```{r}
+ggplot(data = monthly_airqual, aes(x = Month, y = Ozone, stderr = SE)) + 
+        geom_point() + 
+        ylab("Ozone (ppb)") + 
+        geom_segment(stat = "confint")
+  
+```
+
+### Combining Geoms and Stats
