@@ -51,14 +51,14 @@ Ike_map <- get_map(c(left = min(Ike$Longitude), bottom = min(Ike$Latitude),
         source = "stadia", maptype = "stamen_toner_background", zoom = 6) %>%
   ggmap(extent = "device")
 
-# +
-#   geom_hurricane(data = storm_observation,
-#                  aes(x = longitude, y = latitude, 
-#                      r_ne = ne, r_se = se, r_nw = nw, r_sw = sw,
-#                      fill = wind_speed, color = wind_speed)) + 
-#   scale_color_manual(name = "Wind speed (kts)", 
-#                      values = c("red", "orange", "yellow")) + 
-#   scale_fill_manual(name = "Wind speed (kts)", 
-#                     values = c("red", "orange", "yellow"))
+Ike_map +
+  geom_circle(data = Ike %>% filter(day(Date) == 01 & hour(Date) == 12), aes(Longitude, Latitude, r_ne = NE, r_nw = NW, r_sw = SW, r_se = SE,
+                              ), radius_scale = 1) +
+  scale_color_manual(name = "Wind speed (kts)", 
+                     values = c("red", "orange", "yellow")) + 
+  scale_fill_manual(name = "Wind speed (kts)", 
+                    values = c("red", "orange", "yellow"))
+
+
 
 
