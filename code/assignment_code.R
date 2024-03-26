@@ -9,6 +9,8 @@ library(tidyr)
 
 library(tidyverse)
 library(ggmap)
+library(geosphere)
+
 
 
 # Data prep -----
@@ -29,7 +31,7 @@ ext_tracks <- read_fwf("data/ebtrk_atlc_1988_2015.txt",
                        na = "-99")
 
 tracks_clean <- ext_tracks %>% 
-  mutate(Longitude = round(Longitude - 180, 1),
+  mutate(Longitude = round(Longitude - 180, 2),
          Date = ymd_h(paste0(Year, Month, Day, Hour)),
          Storm_ID = paste0(Storm_Name, "-", Year)) %>% 
   select(!c(2:6, 9:14, 27:29)) %>% 
@@ -51,6 +53,33 @@ Ike_map <- get_map(c(left = min(Ike$Longitude), bottom = min(Ike$Latitude),
         source = "stadia", maptype = "stamen_toner_background", zoom = 6) %>%
   ggmap(extent = "device")
 
+# Ike %>% 
+#   filter(day(Date) == 01 & hour(Date) == 12) %>% 
+#   mutate(coords = paste(Longitude, Latitude, sep = ", "))
+
+Ike_34 <- tracks_clean %>% 
+  filter(str_starts(Storm_ID, "IKE")) %>% 
+  filter(day(Date) == 01 & hour(Date) == 12 & Wind_Speed == 34) %>% 
+  mutate(across(c(NE, SE, SW, NW), ~ .x * 1852))
+
+r_NE <- 1:90
+r_SE <- 91:180
+r_SW <- 181:270
+r_NW <- 271:360
+
+quadr_1 <- destPoint(c(Ike_34$Longitude, Ike_34$Latitude), b = r_NE, d = Ike_34$NE)
+quadr_2 <- destPoint(c(Ike_34$Longitude, Ike_34$Latitude), b = r_SE, d = Ike_34$SE)
+quadr_3 <- destPoint(c(Ike_34$Longitude, Ike_34$Latitude), b = r_SW, d = Ike_34$SW)
+quadr_4 <- destPoint(c(Ike_34$Longitude, Ike_34$Latitude), b = r_NW, d = Ike_34$NW)
+circle <- rbind(quadr_1, quadr_2, quadr_3, quadr_4)
+
+plot(circle_2, type='p')
+polygon(circle, col='blue', border='black', lwd=4)
+polygon(circle_2, col='blue', border='black', lwd=4)
+
+
+
+
 Ike_map +
   geom_circle(data = Ike %>% filter(day(Date) == 01 & hour(Date) == 12), aes(Longitude, Latitude, r_ne = NE, r_nw = NW, r_sw = SW, r_se = SE,
                               ), radius_scale = 1) +
@@ -58,7 +87,3 @@ Ike_map +
                      values = c("red", "orange", "yellow")) + 
   scale_fill_manual(name = "Wind speed (kts)", 
                     values = c("red", "orange", "yellow"))
-
-
-
-
