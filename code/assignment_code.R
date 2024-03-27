@@ -47,36 +47,34 @@ tracks_clean <- ext_tracks %>%
 # Stat/geom
 
 StatRadius <- ggplot2::ggproto("StatRadius", Stat,
-                               required_aes = c("x", "y", "rad_ne", "rad_se", 
-                                                "rad_sw", "rad_nw"),
+                               required_aes = c("x", "y", "rad_ne", "rad_se", "rad_sw", "rad_nw"),
                                
+                               # default_aes = ggplot2::aes(scale_radii = 1),
                                
-                               
-                               compute_group = function(data, scales) {
+                               compute_group = function(data, scales, rad_ne, rad_se, rad_sw, rad_nw, scale_radii) {
                                  
-                                 data <- data %>% 
-                                   dplyr::mutate(
-                                     dplyr::across(
-                                       c(rad_NE, rad_SE, rad_SW, rad_NW), ~ .x * 1852
-                                     ))
+                                 # data <- data %>% 
+                                 #   dplyr::mutate(
+                                 #     dplyr::across(
+                                 #       c(rad_ne, rad_se, rad_sw, rad_nw), ~ .x * 1852
+                                 #     ))
                                  
-                                 centre <- c(x, y)
+                                 coords <- c(data$x[1], data$y[1])
                                  
                                  deg_NE <- 1:90
                                  deg_SE <- 91:180
                                  deg_SW <- 181:270
                                  deg_NW <- 271:360
                                  
-                                 quadr_1 <- geosphere::destPoint(centre, b = deg_NE, d = rad_NE)
-                                 quadr_2 <- geosphere::destPoint(centre, b = deg_SE, d = rad_SE)
-                                 quadr_3 <- geosphere::destPoint(centre, b = deg_SW, d = rad_SW)
-                                 quadr_4 <- geosphere::destPoint(centre, b = deg_NW, d = rad_NW)
+                                 q_1 <- geosphere::destPoint(coords, b = deg_NE, d = data$rad_ne)
+                                 q_2 <- geosphere::destPoint(coords, b = deg_SE, d = data$rad_se)
+                                 q_3 <- geosphere::destPoint(coords, b = deg_SW, d = data$rad_sw)
+                                 q_4 <- geosphere::destPoint(coords, b = deg_NW, d = data$rad_nw)
                                  
-                                 point_matrix <- rbind(quadr_1, quadr_2, quadr_3, quadr_4)
-                                 point_matrix[ , "lat"] <- point_matrix[ , "lat"] * scale_radii
+                                 point_matrix <- rbind(q_1, q_2, q_3, q_4)
+                                 # point_matrix[ , "lat"] <- point_matrix[ , "lat"] * scale_radii
                                  
-                                 point_matrix
-                                 
+                                 return(point_matrix)
                                }
                                
 )
@@ -84,10 +82,9 @@ StatRadius <- ggplot2::ggproto("StatRadius", Stat,
 stat_radius <- function(mapping = NULL, 
                         data = NULL, 
                         geom = "polygon",
-                        # scale_factor = 1,
                         position = "identity", 
+                        scale_radii = 1,
                         show.legend = NA,
-                        outliers = TRUE, 
                         inherit.aes = TRUE, 
                         ...) {
   ggplot2::layer(
@@ -95,89 +92,34 @@ stat_radius <- function(mapping = NULL,
     data = data, 
     mapping = mapping, 
     geom = geom, 
-    # scale_factor = scale_factor,
     position = position, 
     show.legend = show.legend, 
     inherit.aes = inherit.aes,
-    params = list(outliers = outliers, ...)
+    params = list(scale_radii = scale_radii, ...)
   )        
 }
 
+get_map(c(left = min(Ike$Longitude), bottom = min(Ike$Latitude), 
+          right = max(Ike$Longitude), top = max(Ike$Latitude)), 
+        source = "stadia", maptype = "stamen_toner_background", zoom = 6) %>%
+  ggmap(extent = "device") +
+  geom_polygon(data = Ike_34, stat = "radius", 
+               aes(x = Longitude, y = Latitude, rad_ne = NE, rad_se = SE,
+                   rad_sw = SW, rad_nw = NW))
 
 # Mapping -----
 Ike <- tracks_clean %>% 
   filter(str_starts(Storm_ID, "IKE"))
 
-Ike_map <- get_map(c(left = min(Ike_34$Longitude), bottom = min(Ike_34$Latitude), 
-          right = max(Ike_34$Longitude), top = max(Ike_34$Latitude)), 
+Ike_map <- get_map(c(left = min(Ike$Longitude), bottom = min(Ike$Latitude), 
+          right = max(Ike$Longitude), top = max(Ike$Latitude)), 
         source = "stadia", maptype = "stamen_toner_background", zoom = 6) %>%
   ggmap(extent = "device")
-
-# Ike %>% 
-#   filter(day(Date) == 01 & hour(Date) == 12) %>% 
-#   mutate(coords = paste(Longitude, Latitude, sep = ", "))
 
 Ike_34 <- tracks_clean %>% 
   filter(str_starts(Storm_ID, "IKE")) %>% 
   filter(day(Date) == 01 & hour(Date) == 12 & Wind_Speed == 34) %>% 
   mutate(across(c(NE, SE, SW, NW), ~ .x * 1852))
-
-StatRadius <- ggplot2::ggproto("StatRadius", Stat,
-                               required_aes = c("x", "y", "rad_ne", "rad_se", 
-                                                "rad_sw", "rad_nw"),
-                               
-                               
-                               
-                               compute_group = function(data, scales) {
-                                 
-                                 data <- data %>% 
-                                   dplyr::mutate(
-                                     dplyr::across(
-                                       c(rad_NE, rad_SE, rad_SW, rad_NW), ~ .x * 1852
-                                     ))
-                                 
-                                 centre <- c(x, y)
-                                 
-                                 deg_NE <- 1:90
-                                 deg_SE <- 91:180
-                                 deg_SW <- 181:270
-                                 deg_NW <- 271:360
-                                 
-                                 quadr_1 <- geosphere::destPoint(centre, b = deg_NE, d = rad_NE)
-                                 quadr_2 <- geosphere::destPoint(centre, b = deg_SE, d = rad_SE)
-                                 quadr_3 <- geosphere::destPoint(centre, b = deg_SW, d = rad_SW)
-                                 quadr_4 <- geosphere::destPoint(centre, b = deg_NW, d = rad_NW)
-                                 
-                                 point_matrix <- rbind(quadr_1, quadr_2, quadr_3, quadr_4)
-                                 point_matrix[ , "lat"] <- point_matrix[ , "lat"] * scale_radii
-                                 
-                                 point_matrix
-                                 
-                               }
-                               
-)
-
-stat_radius <- function(mapping = NULL, 
-                        data = NULL, 
-                        geom = "polygon",
-                        # scale_factor = 1,
-                        position = "identity", 
-                        show.legend = NA,
-                        outliers = TRUE, 
-                        inherit.aes = TRUE, 
-                        ...) {
-  ggplot2::layer(
-    stat = StatRadius, 
-    data = data, 
-    mapping = mapping, 
-    geom = geom, 
-    # scale_factor = scale_factor,
-    position = position, 
-    show.legend = show.legend, 
-    inherit.aes = inherit.aes,
-    params = list(outliers = outliers, ...)
-  )        
-}
 
 # 
 # Ike_map +
