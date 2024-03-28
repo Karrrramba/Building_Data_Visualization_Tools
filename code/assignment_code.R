@@ -74,7 +74,11 @@ StatRadius <- ggplot2::ggproto("StatRadius", Stat,
                                  point_matrix <- rbind(q_1, q_2, q_3, q_4)
                                  # point_matrix[ , "lat"] <- point_matrix[ , "lat"] * scale_radii
                                  
-                                 return(point_matrix)
+                                 # Connect the last and first point to close the circle
+                                 point_matrix <- rbind(point_matrix, point_matrix[1, ])
+                                 
+                                 point_df <- data.frame(x = point_matrix[, 1], y = point_matrix[, 2])
+                                 return(point_df)
                                }
                                
 )
@@ -101,13 +105,16 @@ stat_radius <- function(mapping = NULL,
 
 get_map(c(left = min(Ike$Longitude), bottom = min(Ike$Latitude), 
           right = max(Ike$Longitude), top = max(Ike$Latitude)), 
-        source = "stadia", maptype = "stamen_toner_background", zoom = 6) %>%
+        source = "stadia", maptype = "stamen_toner_background", zoom = 4) %>%
   ggmap(extent = "device") +
   geom_polygon(data = Ike_34, stat = "radius", 
                aes(x = Longitude, y = Latitude, rad_ne = NE, rad_se = SE,
-                   rad_sw = SW, rad_nw = NW))
+                   rad_sw = SW, rad_nw = NW, fill = Wind_Speed, color = Wind_Speed)) +
+  scale_color_manual(name = "Wind speed (kts)",
+                     values = c("red", "orange", "yellow")) +
+  scale_fill_manual(name = "Wind speed (kts)",
+                    values = c("red", "orange", "yellow"))
 
-# Mapping -----
 Ike <- tracks_clean %>% 
   filter(str_starts(Storm_ID, "IKE"))
 
@@ -118,14 +125,8 @@ Ike_map <- get_map(c(left = min(Ike$Longitude), bottom = min(Ike$Latitude),
 
 Ike_34 <- tracks_clean %>% 
   filter(str_starts(Storm_ID, "IKE")) %>% 
-  filter(day(Date) == 01 & hour(Date) == 12 & Wind_Speed == 34) %>% 
+  filter(day(Date) == 10 & hour(Date) == 12) %>% 
   mutate(across(c(NE, SE, SW, NW), ~ .x * 1852))
 
-# 
-# Ike_map +
-#   geom_polygon() +
-#   stat_radius(data = Ike_34, aes(long)) +
-#   scale_color_manual(name = "Wind speed (kts)", 
-#                      values = c("red", "orange", "yellow")) + 
-#   scale_fill_manual(name = "Wind speed (kts)", 
-#                     values = c("red", "orange", "yellow"))
+
+  
