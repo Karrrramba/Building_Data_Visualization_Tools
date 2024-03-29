@@ -12,7 +12,6 @@ library(ggmap)
 library(geosphere)
 
 
-
 # Data prep -----
 
 ext_tracks_widths <- c(7, 10, 2, 2, 3, 5, 5, 6, 4, 5, 4, 4, 5, 3, 4, 3, 3, 3,
@@ -45,10 +44,8 @@ tracks_clean <- ext_tracks %>%
               values_from = Radius)
 
 # Stat/geom
-
 StatRadius <- ggplot2::ggproto("StatRadius", Stat,
                                required_aes = c("x", "y", "rad_ne", "rad_se", "rad_sw", "rad_nw"),
-                               
                                # default_aes = ggplot2::aes(scale_radii = 1),
                                
                                compute_group = function(data, scales, rad_ne, rad_se, rad_sw, rad_nw, scale_radii) {
@@ -66,14 +63,13 @@ StatRadius <- ggplot2::ggproto("StatRadius", Stat,
                                  deg_SW <- 181:270
                                  deg_NW <- 271:360
                                  
-                                 q_1 <- geosphere::destPoint(coords, b = deg_NE, d = data$rad_ne)
-                                 q_2 <- geosphere::destPoint(coords, b = deg_SE, d = data$rad_se)
-                                 q_3 <- geosphere::destPoint(coords, b = deg_SW, d = data$rad_sw)
-                                 q_4 <- geosphere::destPoint(coords, b = deg_NW, d = data$rad_nw)
+                                 q_1 <- geosphere::destPoint(coords, b = deg_NE, d = data$rad_ne * scale_radii)
+                                 q_2 <- geosphere::destPoint(coords, b = deg_SE, d = data$rad_se * scale_radii)
+                                 q_3 <- geosphere::destPoint(coords, b = deg_SW, d = data$rad_sw * scale_radii)
+                                 q_4 <- geosphere::destPoint(coords, b = deg_NW, d = data$rad_nw * scale_radii)
                                  
                                  point_matrix <- rbind(q_1, q_2, q_3, q_4)
-                                 # point_matrix[ , "lat"] <- point_matrix[ , "lat"] * scale_radii
-                                 
+
                                  # Connect the last and first point to close the circle
                                  point_matrix <- rbind(point_matrix, point_matrix[1, ])
                                  
@@ -87,7 +83,6 @@ stat_radius <- function(mapping = NULL,
                         data = NULL, 
                         geom = "polygon",
                         position = "identity", 
-                        scale_radii = 1,
                         show.legend = NA,
                         inherit.aes = TRUE, 
                         ...) {
@@ -103,9 +98,9 @@ stat_radius <- function(mapping = NULL,
   )        
 }
 
-get_map(c(left = min(Ike$Longitude), bottom = min(Ike$Latitude), 
-          right = max(Ike$Longitude), top = max(Ike$Latitude)), 
-        source = "stadia", maptype = "stamen_toner_background", zoom = 4) %>%
+get_map(c(left = min(Ike$Longitude) + 20, bottom = min(Ike$Latitude), 
+          right = max(Ike$Longitude) + 20, top = max(Ike$Latitude)), 
+        source = "stadia", maptype = "stamen_toner_background", zoom = 5) %>%
   ggmap(extent = "device") +
   geom_polygon(data = Ike_34, stat = "radius", 
                aes(x = Longitude, y = Latitude, rad_ne = NE, rad_se = SE,
@@ -115,18 +110,19 @@ get_map(c(left = min(Ike$Longitude), bottom = min(Ike$Latitude),
   scale_fill_manual(name = "Wind speed (kts)",
                     values = c("red", "orange", "yellow"))
 
+
 Ike <- tracks_clean %>% 
   filter(str_starts(Storm_ID, "IKE"))
 
-Ike_map <- get_map(c(left = min(Ike$Longitude), bottom = min(Ike$Latitude), 
+ke_map <- get_map(c(left = min(Ike$Longitude), bottom = min(Ike$Latitude), 
           right = max(Ike$Longitude), top = max(Ike$Latitude)), 
         source = "stadia", maptype = "stamen_toner_background", zoom = 6) %>%
   ggmap(extent = "device")
-
 Ike_34 <- tracks_clean %>% 
   filter(str_starts(Storm_ID, "IKE")) %>% 
   filter(day(Date) == 10 & hour(Date) == 12) %>% 
   mutate(across(c(NE, SE, SW, NW), ~ .x * 1852))
 
-
-  
+Ike_nm <- tracks_clean %>% 
+  filter(str_starts(Storm_ID, "IKE")) %>% 
+  filter(day(Date) == 10 & hour(Date) == 12)
