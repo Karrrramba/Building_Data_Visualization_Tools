@@ -4,8 +4,139 @@ library(grid)
 library(ggplot2)
 library(magrittr)
 
-#' @rdname geom_boxplot
+#' geom_hurricane
 #'
+#' @description This geometry is used to plot a polygon from hurricane wind 
+#' radii in the four directions NE, SE, SW, NW on a map. 
+#' 
+#' @param mapping Aesthetic mapping.
+#' @param data The dataset to be used for plotting.
+#' @param stat The statistical transformation to use. Default is "radius".
+#' @param scale_radii The scaling factor for the radii. Default is 1.
+#' @param nm A flag whether radii in the data are given as nautical miles.
+#' Defaults to FALSE. If TRUE, nautical miles will be projected to metric scale.
+#' @param position Position adjustment. Default is "identity".
+#' @param show.legend A flag indicating whether to show legend. Default is NA.
+#' @param inherit.aes A flag indicating whether to inherit aesthetics. Default is TRUE.
+#' @param ... Other parameters passed to the geom.
+#' 
+#' @return A layer for plotting hurricane wind radii.
+#' 
+#' @inheritParams ggplot2::layer
+#' @inheritParams stat_radius
+#' 
+#' @importFrom ggmap get_map ggmap
+#' 
+#' @examples /dontrun{
+#' # library(ggmap)
+#' 
+#' # Create hurricane data
+#' hurricane_data <- data.frame(
+#'   Longitude = 23.8,
+#'   Latitude = -95,
+#'   Wind_Speed = c(34, 50, 64),
+#'   NE = c(180, 120, 65),
+#'   SE = c(155, 80, 20),
+#'   SW = c(120, 60, 15),
+#'   NW = c(180, 100, 45)
+#' )
+#' # Create map object
+#' # m <- get_map(c(left = -123, bottom = 17, right = -64, top = 47),
+#' # source = "stadia", maptype = "stamen_toner_background", zoom = 5)) +
+#' # ggmap(extent = "device")
+#' 
+#' 
+
+
+#' }
+#' @export
+geom_hurricane <- function(mapping = NULL, 
+                           data = NULL, 
+                           stat = "radius",
+                           position = "identity", 
+                           scale_radii = 1,
+                           nm = FALSE,
+                           show.legend = NA, 
+                           inherit.aes = TRUE, 
+                           ...) {
+  ggplot2::layer(
+    stat = StatRadius,
+    geom = GeomHurricane, 
+    mapping = mapping,  
+    data = data, 
+    position = position, 
+    show.legend = show.legend, 
+    inherit.aes = inherit.aes,
+    params = list(
+      scale_radii = scale_radii,
+      nm = nm, 
+      ...)
+  )
+}
+
+#' Geom Hurricane
+#' @rdname ggplot2-ggproto
+#' @format NULL
+#' @usage NULL
+#' @export
+GeomHurricane <- ggplot2::ggproto("GeomHurricane", GeomPolygon,
+                                  default_aes = ggplot2::aes(color = "yellow", 
+                                                             fill = "yellow", 
+                                                             scale_radii = 1, 
+                                                             linewidth = 0.5,
+                                                             alpha = 0.5)
+)
+
+
+#' stat_radius
+#'
+#' @description This statistic computes the coordinates for plotting hurricane 
+#' wind radii based on the provided radii and coordinates.
+#' 
+#' @param mapping Aesthetic mappings created by ggplot2.
+#' @param data A data frame containing the necessary columns with longitude (x),
+#' latitude (y) as well as wind radii for the directions NE, SE, SW and NW.
+#' @param geom Type of geometric object to draw. Defaults to "polygon".
+#' @param position Position adjustment to use for overlap . 
+#' Defaults to "identity".
+#' @param scale_radii The scaling factor for the radii. Default is 1.
+#' @param show.legend Logical. Should this layer be included in the legends? 
+#' NA (default) includes if any aesthetics are mapped.
+#' @param inherit.aes Should inherit aesthetics from the parent plot?
+#' @param ... Additional parameters to be passed to the ggplot2::layer function.
+#' 
+#' @inheritParams ggplot2::layer
+#' 
+#' @importFrom ggplot2 layer
+#' 
+#' @return A layer with the computed coordinates for plotting hurricane wind radii.
+#' 
+#' @export
+stat_radius <- function(mapping = NULL, 
+                        data = NULL, 
+                        geom = "polygon",
+                        position = "identity", 
+                        scale_radii = 1,
+                        nm = FALSE, 
+                        show.legend = NA,
+                        inherit.aes = TRUE, 
+                        ...) {
+  ggplot2::layer(
+    stat = StatRadius, 
+    data = data, 
+    mapping = mapping, 
+    geom = geom, 
+    position = position, 
+    show.legend = show.legend, 
+    inherit.aes = inherit.aes,
+    params = list(
+      scale_radii = scale_radii, 
+      nm = nm, 
+      ...)
+  )        
+}
+
+
 #' Statistic for plotting hurricane wind radii
 #'
 #' @description This statistic computes the coordinates for plotting hurricane 
@@ -31,10 +162,17 @@ library(magrittr)
 #' @return A data frame with the computed coordinates for plotting hurricane wind radii.
 #' 
 #' @export
+
+
+
+#' @rdname stat_hurricane
+#' @usage NULL
+#' @format NULL
+#' @export
 StatRadius <- ggplot2::ggproto("StatRadius", Stat,
-                               required_aes = c("long", "lat", "rad_ne", "rad_se", "rad_sw", "rad_nw"),
+                               required_aes = c("x", "y", "rad_ne", "rad_se", "rad_sw", "rad_nw"),
                                
-                               compute_group = function(data, scales, rad_ne, rad_se, rad_sw, rad_nw, scale_fct = 1, nm = FALSE) {
+                               compute_group = function(data, scales, rad_ne, rad_se, rad_sw, rad_nw, scale_radii = 1, nm = FALSE) {
                                  
                                  if (nm == TRUE) {
                                    data <- data %>%
@@ -44,17 +182,17 @@ StatRadius <- ggplot2::ggproto("StatRadius", Stat,
                                        ))
                                  }
 
-                                 coords <- c(data$long[1], data$lat[1])
+                                 coords <- c(data$x, data$y)
                                  
                                  deg_NE <- 1:90
                                  deg_SE <- 91:180
                                  deg_SW <- 181:270
                                  deg_NW <- 271:360
                                  
-                                 q_1 <- geosphere::destPoint(coords, b = deg_NE, d = data$rad_ne * scale_fct)
-                                 q_2 <- geosphere::destPoint(coords, b = deg_SE, d = data$rad_se * scale_fct)
-                                 q_3 <- geosphere::destPoint(coords, b = deg_SW, d = data$rad_sw * scale_fct) 
-                                 q_4 <- geosphere::destPoint(coords, b = deg_NW, d = data$rad_nw * scale_fct) 
+                                 q_1 <- geosphere::destPoint(coords, b = deg_NE, d = data$rad_ne * scale_radii)
+                                 q_2 <- geosphere::destPoint(coords, b = deg_SE, d = data$rad_se * scale_radii)
+                                 q_3 <- geosphere::destPoint(coords, b = deg_SW, d = data$rad_sw * scale_radii) 
+                                 q_4 <- geosphere::destPoint(coords, b = deg_NW, d = data$rad_nw * scale_radii) 
                                  
                                  point_matrix <- rbind(q_1, q_2, q_3, q_4)
                                  point_matrix <- rbind(point_matrix, point_matrix[1, ])
@@ -65,109 +203,6 @@ StatRadius <- ggplot2::ggproto("StatRadius", Stat,
 )
 
 
-#' stat_radius
-#'
-#' @title Statistic for plotting hurricane wind radii
-#'
-#' @description This statistic computes the coordinates for plotting hurricane wind radii based on the provided radii and coordinates.
-#' 
-#' @param mapping Aesthetic mappings created by ggplot2.
-#' @param data A data frame containing the necessary columns for plotting: x, y, rad_ne, rad_se, rad_sw, rad_nw.
-#' @param geom Type of geometric object to draw (default is "polygon").
-#' @param position Position adjustment to use for overlap (default is "identity").
-#' @param scale_radii The scaling factor for the radii. Default is 1.
-#' @param show.legend Logical. Should this layer be included in the legends? NA (default) includes if any aesthetics are mapped.
-#' @param inherit.aes Should inherit aesthetics from the parent plot?
-#' @param ... Additional parameters to be passed to the ggplot2::layer function.
-#' 
-#' @importFrom ggplot2 layer
-#' 
-#' @return A layer with the computed coordinates for plotting hurricane wind radii.
-#' 
-#' @export
-stat_radius <- function(mapping = NULL, 
-                        data = NULL, 
-                        geom = "polygon",
-                        position = "identity", 
-                        scale_fct = 1,
-                        nm = FALSE, 
-                        show.legend = NA,
-                        inherit.aes = TRUE, 
-                        ...) {
-  ggplot2::layer(
-    stat = StatRadius, 
-    data = data, 
-    mapping = mapping, 
-    geom = geom, 
-    position = position, 
-    show.legend = show.legend, 
-    inherit.aes = inherit.aes,
-    params = list(
-      scale_fct = scale_fct, 
-      nm = nm, 
-      ...)
-  )        
-}
-
-
-
-
-#' geom_hurricane
-#'
-#' @description This geometry is used to plot a polygon from hurricane wind 
-#' radii in the four directions NE, SE, SW, NW on a map. 
-#' 
-#' @param mapping Aesthetic mapping.
-#' @param data The dataset to be used for plotting.
-#' @param stat The statistical transformation to use. Default is "radius".
-#' @param scale_radii The scaling factor for the radii. Default is 1.
-#' @param position Position adjustment. Default is "identity".
-#' @param na.rm A logical value indicating whether missing values should be removed. Default is FALSE.
-#' @param show.legend A flag indicating whether to show legend. Default is NA.
-#' @param inherit.aes A flag indicating whether to inherit aesthetics. Default is TRUE.
-#' @param ... Other parameters passed to the geom.
-#' 
-#' @return A layer for plotting hurricane wind radii.
-#' 
-#' @export
-geom_hurricane <- function(mapping = NULL, 
-                           data = NULL, 
-                           stat = "radius",
-                           position = "identity", 
-                           scale_fct = 1,
-                           nm = FALSE,
-                           na.rm = FALSE,
-                           show.legend = NA, 
-                           inherit.aes = TRUE, 
-                           ...) {
-  ggplot2::layer(
-    stat = StatRadius,
-    geom = GeomHurricane, 
-    mapping = mapping,  
-    data = data, 
-    position = position, 
-    show.legend = show.legend, 
-    inherit.aes = inherit.aes,
-    params = list(
-      na.rm = na.rm, 
-      scale_fct = scale_fct,
-      nm = nm, 
-      ...)
-  )
-}
-
-#' @rdname ggplot2-ggproto
-#' @format NULL
-#' @usage NULL
-#' @rdn
-#' @export
-GeomHurricane <- ggplot2::ggproto("GeomHurricane", GeomPolygon,
-                                  default_aes = ggplot2::aes(color = "yellow", 
-                                                             fill = "yellow", 
-                                                             scale_radii = 1, 
-                                                             linewidth = 0.5,
-                                                             alpha = 0.5)
-)
 
 
 
@@ -176,10 +211,10 @@ get_map(c(left = min(Ike$Longitude) + 20, bottom = min(Ike$Latitude),
         source = "stadia", maptype = "stamen_toner_background", zoom = 5) %>%
   ggmap(extent = "device") +
   geom_hurricane(data = Ike_nm, 
-               aes(long = Longitude, lat = Latitude, 
+               aes(x = Longitude, y = Latitude, 
                    rad_ne = NE, rad_se = SE, rad_sw = SW, rad_nw = NW, 
                    fill = Wind_Speed, color = Wind_Speed), 
-               scale_fct = 2,
+               scale_radii = 2,
                nm = TRUE) +
   scale_color_manual(name = "Wind speed (kts)",
                      values = c("red", "orange", "yellow")) +
