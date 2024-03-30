@@ -14,10 +14,11 @@ library(magrittr)
 #' @param stat The statistical transformation to use. Default is "radius".
 #' @param scale_radii The scaling factor for the radii. Default is 1.
 #' @param nm A flag whether radii in the data are given as nautical miles.
-#' Defaults to FALSE. If TRUE, nautical miles will be projected to metric scale.
+#' Defaults to TRUE. If TRUE, nautical miles will be transofromed to metric scale.
 #' @param position Position adjustment. Default is "identity".
 #' @param show.legend A flag indicating whether to show legend. Default is NA.
-#' @param inherit.aes A flag indicating whether to inherit aesthetics. Default is TRUE.
+#' @param inherit.aes A flag indicating whether to inherit aesthetics. 
+#' Defaults to TRUE.
 #' @param ... Other parameters passed to the geom.
 #' 
 #' @return A layer for plotting hurricane wind radii.
@@ -30,35 +31,44 @@ library(magrittr)
 #' @examples /dontrun{
 #' # library(ggmap)
 #' 
-#' # Create hurricane data
-#' hurricane_data <- data.frame(
-#'   Longitude = 23.8,
-#'   Latitude = -95,
-#'   Wind_Speed = c(34, 50, 64),
-#'   NE = c(180, 120, 65),
-#'   SE = c(155, 80, 20),
-#'   SW = c(120, 60, 15),
-#'   NW = c(180, 100, 45)
+#' # Storm data
+#' d <- data.frame(
+#'   Longitude = -94.6,
+#'   Latitude = 29.1,
+#'   Wind_Speed = factor(c(34, 50, 64)),
+#'   NE = c(225, 150, 110),
+#'   SE = c(200, 160, 90),
+#'   SW = c(125, 80, 55),
+#'   NW = c(125, 75, 45)
 #' )
-#' # Create map object
-#' # m <- get_map(c(left = -123, bottom = 17, right = -64, top = 47),
-#' # source = "stadia", maptype = "stamen_toner_background", zoom = 5)) +
-#' # ggmap(extent = "device")
 #' 
+#' # Background map
+#' m <- get_map(c(left = d[1, "Longitude"] - 10, bottom = d[1, "Latitude"] - 10, 
+#'                right = d[1, "Longitude"] + 10, top = d[1, "Latitude"] + 10),
+#'              source = "stadia", maptype = "stamen_toner_background", zoom = 5) %>% 
+#'   ggmap(extent = "device")
 #' 
-
-
-#' }
+#' m +
+#'   geom_hurricane(data = d,
+#'                  aes(x = Longitude, y = Latitude, rad_ne = NE,
+#'                      rad_se = SE, rad_sw = SW, rad_nw = NW,
+#'                      fill = Wind_Speed, color = Wind_Speed), nm = TRUE) +
+#'   scale_color_manual(name = "Wind speed (kts)",
+#'                      values = c("red", "orange", "yellow")) +
+#'   scale_fill_manual(name = "Wind speed (kts)",
+#'                     values = c("red", "orange", "yellow"))
+#' 
 #' @export
 geom_hurricane <- function(mapping = NULL, 
                            data = NULL, 
                            stat = "radius",
                            position = "identity", 
                            scale_radii = 1,
-                           nm = FALSE,
+                           nm = TRUE,
                            show.legend = NA, 
                            inherit.aes = TRUE, 
                            ...) {
+  
   ggplot2::layer(
     stat = StatRadius,
     geom = GeomHurricane, 
@@ -94,8 +104,9 @@ GeomHurricane <- ggplot2::ggproto("GeomHurricane", GeomPolygon,
 #' wind radii based on the provided radii and coordinates.
 #' 
 #' @param mapping Aesthetic mappings created by ggplot2.
-#' @param data A data frame containing the necessary columns with longitude (x),
-#' latitude (y) as well as wind radii for the directions NE, SE, SW and NW.
+#' @param data A data frame containing the coordinates
+#' \code{x} (longitude),\code{y} (latitude) and the wind radii for the 
+#' directions NE, SE, SW and NW.
 #' @param geom Type of geometric object to draw. Defaults to "polygon".
 #' @param position Position adjustment to use for overlap . 
 #' Defaults to "identity".
@@ -117,7 +128,7 @@ stat_radius <- function(mapping = NULL,
                         geom = "polygon",
                         position = "identity", 
                         scale_radii = 1,
-                        nm = FALSE, 
+                        nm = TRUE, 
                         show.legend = NA,
                         inherit.aes = TRUE, 
                         ...) {
@@ -172,7 +183,7 @@ stat_radius <- function(mapping = NULL,
 StatRadius <- ggplot2::ggproto("StatRadius", Stat,
                                required_aes = c("x", "y", "rad_ne", "rad_se", "rad_sw", "rad_nw"),
                                
-                               compute_group = function(data, scales, rad_ne, rad_se, rad_sw, rad_nw, scale_radii = 1, nm = FALSE) {
+                               compute_group = function(data, scales, rad_ne, rad_se, rad_sw, rad_nw, scale_radii = 1, nm = TRUE) {
                                  
                                  if (nm == TRUE) {
                                    data <- data %>%
@@ -205,18 +216,3 @@ StatRadius <- ggplot2::ggproto("StatRadius", Stat,
 
 
 
-
-get_map(c(left = min(Ike$Longitude) + 20, bottom = min(Ike$Latitude), 
-          right = max(Ike$Longitude) + 20, top = max(Ike$Latitude)), 
-        source = "stadia", maptype = "stamen_toner_background", zoom = 5) %>%
-  ggmap(extent = "device") +
-  geom_hurricane(data = Ike_nm, 
-               aes(x = Longitude, y = Latitude, 
-                   rad_ne = NE, rad_se = SE, rad_sw = SW, rad_nw = NW, 
-                   fill = Wind_Speed, color = Wind_Speed), 
-               scale_radii = 2,
-               nm = TRUE) +
-  scale_color_manual(name = "Wind speed (kts)",
-                     values = c("red", "orange", "yellow")) +
-  scale_fill_manual(name = "Wind speed (kts)",
-                    values = c("red", "orange", "yellow"))
