@@ -1,7 +1,8 @@
 library(dplyr)
 library(geosphere)
-library(grid)
 library(ggplot2)
+library(ggmap)
+library(grid)
 library(magrittr)
 
 #' geom_hurricane
@@ -38,7 +39,7 @@ library(magrittr)
 #' @examples /dontrun{
 #' # library(ggmap)
 #' 
-#' # Storm data
+#' # Create storm data
 #' d <- data.frame(
 #'   Longitude = -94.6,
 #'   Latitude = 29.1,
@@ -56,8 +57,7 @@ library(magrittr)
 #'   ggmap(extent = "device")
 #' 
 #' m +
-#'   geom_hurricane(data = d,
-#'                  aes(x = Longitude, y = Latitude, rad_ne = NE,
+#'   geom_hurricane(data = d, aes(x = Longitude, y = Latitude, rad_ne = NE,
 #'                      rad_se = SE, rad_sw = SW, rad_nw = NW,
 #'                      fill = Wind_Speed, color = Wind_Speed), nm = TRUE) +
 #'   scale_color_manual(name = "Wind speed (kts)",
@@ -72,7 +72,7 @@ geom_hurricane <- function(mapping = NULL,
                            stat = "radius",
                            position = "identity", 
                            scale_radii = 1,
-                           nm = TRUE,
+                           runit = nm,
                            show.legend = NA, 
                            inherit.aes = TRUE, 
                            ...) {
@@ -87,7 +87,7 @@ geom_hurricane <- function(mapping = NULL,
     inherit.aes = inherit.aes,
     params = list(
       scale_radii = scale_radii,
-      nm = nm, 
+      runit = runit, 
       ...)
   )
 }
@@ -106,20 +106,54 @@ GeomHurricane <- ggplot2::ggproto("GeomHurricane", GeomPolygon,
 )
 
 
-#' stat_radius
+#' Radius statistic
 #'
-#' @description This statistic computes the coordinates for plotting hurricane 
+#' This statistic computes the coordinates for plotting hurricane 
 #' wind radii based on the provided radii and coordinates.
 #' 
 #' @param data A data frame containing the coordinates
 #' for longitude and latitude (in deg), and the wind radii for the 
 #' directions NE, SE, SW and NW.
-#' @param scale_radii The scaling factor for the radii. Default is 1.
+#' @param scale_radii The scaling factor for the radii. Defaults to 1.
+#' @param runit Unit of the wind radii. Either 'nm' for nautical miles or'm' for meters.
+#' Defaults to 'nm'.
 #' @inheritParams ggplot2::layer
 #' 
 #' @importFrom ggplot2 layer
 #' 
 #' @return A layer with the computed coordinates for plotting hurricane wind radii.
+#' 
+#' @examples /dontrun{
+#' # library(ggmap)
+#' 
+#' # Create data frame
+#' d <- data.frame(
+#'   Longitude = -94.6,
+#'   Latitude = 29.1,
+#'   Wind_Speed = factor(c(34, 50, 64)),
+#'   NE = c(225, 150, 110),
+#'   SE = c(200, 160, 90),
+#'   SW = c(125, 80, 55),
+#'   NW = c(125, 75, 45)
+#' )
+#' 
+#' # Background map
+#' m <- get_map(c(left = d[1, "Longitude"] - 10, bottom = d[1, "Latitude"] - 10, 
+#'                right = d[1, "Longitude"] + 10, top = d[1, "Latitude"] + 10),
+#'              source = "stadia", maptype = "stamen_toner_background", zoom = 5) %>% 
+#'   ggmap(extent = "device")
+#' 
+#' m + 
+#'  geom_polygon(data = d, stat = "radius", 
+#'             aes(x = Longitude, y = Latitude, rad_ne = NE,
+#'                 rad_se = SE, rad_sw = SW, rad_nw = NW,
+#'                 fill = Wind_Speed, color = Wind_Speed, alpha = 0.5))
+#' }
+#' 
+#' 
+#' 
+#' 
+#' 
 #' 
 #' @export
 stat_radius <- function(mapping = NULL, 
@@ -127,7 +161,7 @@ stat_radius <- function(mapping = NULL,
                         geom = "polygon",
                         position = "identity", 
                         scale_radii = 1,
-                        nm = TRUE, 
+                        runit = "nm", 
                         show.legend = NA,
                         inherit.aes = TRUE, 
                         ...) {
@@ -141,7 +175,7 @@ stat_radius <- function(mapping = NULL,
     inherit.aes = inherit.aes,
     params = list(
       scale_radii = scale_radii, 
-      nm = nm, 
+      runit = runit, 
       ...)
   )        
 }
@@ -182,9 +216,9 @@ stat_radius <- function(mapping = NULL,
 StatRadius <- ggplot2::ggproto("StatRadius", Stat,
                                required_aes = c("x", "y", "rad_ne", "rad_se", "rad_sw", "rad_nw"),
                                
-                               compute_group = function(data, scales, rad_ne, rad_se, rad_sw, rad_nw, scale_radii = 1, nm = TRUE) {
+                               compute_group = function(data, scales, rad_ne, rad_se, rad_sw, rad_nw, scale_radii = 1, runit = "nm") {
                                  
-                                 if (nm == TRUE) {
+                                 if (runit == "nm") {
                                    data <- data %>%
                                      dplyr::mutate(
                                        dplyr::across(
