@@ -29,79 +29,41 @@ ext_tracks <- read_fwf("data/ebtrk_atlc_1988_2015.txt",
                        fwf_widths(ext_tracks_widths, ext_tracks_colnames),
                        na = "-99")
 
-tracks_clean <- ext_tracks %>% 
-  mutate(Longitude = round(Longitude - 180, 2),
+tr2 <- ext_tracks %>% 
+  mutate(Longitude = round(Longitude * -1, 2),
          Date = ymd_h(paste0(Year, Month, Day, Hour)),
          Storm_ID = paste0(Storm_Name, "-", Year)) %>% 
   select(!c(2:6, 9:14, 27:29)) %>% 
   relocate(Date, .after = Storm_ID) %>% 
   pivot_longer(cols = starts_with("Radius"),
-               names_to = c("Wind_Speed", "Quadrant"),
+               names_to = c("WindSpeed", "Quadrant"),
                names_pattern = "Radius_(.*)_(.*)",
-               values_to = "Radius",
-               ) %>% 
+               values_to = "Radius") %>% 
   pivot_wider(names_from = Quadrant,
               values_from = Radius)
 
-# Stat/geom
-StatRadius <- ggplot2::ggproto("StatRadius", Stat,
-                               required_aes = c("x", "y", "rad_ne", "rad_se", "rad_sw", "rad_nw"),
-                               # default_aes = ggplot2::aes(scale_radii = 1),
-                               
-                               compute_group = function(data, scales, rad_ne, rad_se, rad_sw, rad_nw, scale_radii) {
-                                 
-                                 # data <- data %>% 
-                                 #   dplyr::mutate(
-                                 #     dplyr::across(
-                                 #       c(rad_ne, rad_se, rad_sw, rad_nw), ~ .x * 1852
-                                 #     ))
-                                 
-                                 coords <- c(data$x[1], data$y[1])
-                                 
-                                 deg_NE <- 1:90
-                                 deg_SE <- 91:180
-                                 deg_SW <- 181:270
-                                 deg_NW <- 271:360
-                                 
-                                 q_1 <- geosphere::destPoint(coords, b = deg_NE, d = data$rad_ne * scale_radii)
-                                 q_2 <- geosphere::destPoint(coords, b = deg_SE, d = data$rad_se * scale_radii)
-                                 q_3 <- geosphere::destPoint(coords, b = deg_SW, d = data$rad_sw * scale_radii)
-                                 q_4 <- geosphere::destPoint(coords, b = deg_NW, d = data$rad_nw * scale_radii)
-                                 
-                                 point_matrix <- rbind(q_1, q_2, q_3, q_4)
+Ike <- tr2 %>% 
+  filter(str_starts(Storm_ID, "IKE"))
 
-                                 # Connect the last and first point to close the circle
-                                 point_matrix <- rbind(point_matrix, point_matrix[1, ])
-                                 
-                                 point_df <- data.frame(x = point_matrix[, 1], y = point_matrix[, 2])
-                                 return(point_df)
-                               }
-                               
-)
 
-stat_radius <- function(mapping = NULL, 
-                        data = NULL, 
-                        geom = "polygon",
-                        position = "identity", 
-                        show.legend = NA,
-                        inherit.aes = TRUE, 
-                        ...) {
-  ggplot2::layer(
-    stat = StatRadius, 
-    data = data, 
-    mapping = mapping, 
-    geom = geom, 
-    position = position, 
-    show.legend = show.legend, 
-    inherit.aes = inherit.aes,
-    params = list(scale_radii = scale_radii, ...)
-  )        
-}
+Ike_obs <- tr2 %>% 
+  filter(str_starts(Storm_ID, "IKE")) %>% 
+  filter(day(Date) == 13 & hour(Date) == 06)
 
-get_map(c(left = min(Ike$Longitude) + 20, bottom = min(Ike$Latitude), 
-          right = max(Ike$Longitude) + 20, top = max(Ike$Latitude)), 
-        source = "stadia", maptype = "stamen_toner_background", zoom = 5) %>%
-  ggmap(extent = "device") +
+
+Ike_path <- tr2 %>% 
+  filter(str_starts(Storm_ID, "IKE")) %>% 
+  filter(WindSpeed == 34) 
+  
+
+# Map object
+Ike_map <- get_map(c(left = min(Ike$Longitude) - 5, bottom = min(Ike$Latitude) - 3, 
+                    right = max(Ike$Longitude) + 3, top = max(Ike$Latitude) + 3), 
+                  source = "stadia", maptype = "stamen_toner_background", zoom = 6) %>%
+  ggmap(extent = "device")
+
+# Mapping -----
+
   geom_polygon(data = Ike_34, stat = "radius", 
                aes(x = Longitude, y = Latitude, rad_ne = NE, rad_se = SE,
                    rad_sw = SW, rad_nw = NW, fill = Wind_Speed, color = Wind_Speed)) +
@@ -110,19 +72,61 @@ get_map(c(left = min(Ike$Longitude) + 20, bottom = min(Ike$Latitude),
   scale_fill_manual(name = "Wind speed (kts)",
                     values = c("red", "orange", "yellow"))
 
+# Example -----
+# Storm data
+d <- data.frame(
+    Longitude = -94.6,
+    Latitude = 29.1,
+    Wind_Speed = factor(c(34, 50, 64)),
+    NE = c(225, 150, 110),
+    SE = c(200, 160, 90),
+    SW = c(125, 80, 55),
+    NW = c(125, 75, 45)
+  )
 
-Ike <- tracks_clean %>% 
-  filter(str_starts(Storm_ID, "IKE"))
+# Background map
+m <- get_map(c(left = d[1, "Longitude"] - 10, bottom = d[1, "Latitude"] - 10, 
+          right = d[1, "Longitude"] + 10, top = d[1, "Latitude"] + 10),
+ source = "stadia", maptype = "stamen_toner_background", zoom = 5) %>% 
+ ggmap(extent = "device")
 
-ke_map <- get_map(c(left = min(Ike$Longitude), bottom = min(Ike$Latitude), 
-          right = max(Ike$Longitude), top = max(Ike$Latitude)), 
-        source = "stadia", maptype = "stamen_toner_background", zoom = 6) %>%
-  ggmap(extent = "device")
-Ike_34 <- tracks_clean %>% 
-  filter(str_starts(Storm_ID, "IKE")) %>% 
-  filter(day(Date) == 10 & hour(Date) == 12) %>% 
-  mutate(across(c(NE, SE, SW, NW), ~ .x * 1852))
+m +
+ geom_hurricane(data = d,
+  aes(x = Longitude, y = Latitude, rad_ne = NE,
+      rad_se = SE, rad_sw = SW, rad_nw = NW,
+      fill = Wind_Speed, color = Wind_Speed), nm = TRUE) +
+ scale_color_manual(name = "Wind speed (kts)",
+    values = c("red", "orange", "yellow")) +
+ scale_fill_manual(name = "Wind speed (kts)",
+    values = c("red", "orange", "yellow"))
 
-Ike_nm <- tracks_clean %>% 
-  filter(str_starts(Storm_ID, "IKE")) %>% 
-  filter(day(Date) == 10 & hour(Date) == 12)
+# storm path
+Ike_map +
+  geom_point(data = Ike_path, aes(x = Longitude, y = Latitude), color = "red")
+
+# Scale comparison 
+f <- m +
+  geom_hurricane(data = Ike_obs, 
+                 aes(x = Longitude, y = Latitude, 
+                     rad_ne = NE, rad_se = SE, rad_sw = SW, rad_nw = NW, 
+                     fill = WindSpeed, color = WindSpeed), 
+                 scale_radii = 1) +
+  scale_color_manual(name = "Wind speed (kts)",
+                     values = c("yellow", "orange", "red")) +
+  scale_fill_manual(name = "Wind speed (kts)",
+                    values = c("yellow", "orange", "red")) +
+  ggtitle("Hurrican Ike \n13/09/2008 06:00 \nscale_radii = 0.5")
+
+h <- m +
+  geom_hurricane(data = Ike_obs, 
+                 aes(x = Longitude, y = Latitude, 
+                     rad_ne = NE, rad_se = SE, rad_sw = SW, rad_nw = NW, 
+                     fill = WindSpeed, color = WindSpeed), 
+                 scale_radii = 0.5) +
+  scale_color_manual(name = "Wind speed (kts)",
+                     values = c("yellow", "orange", "red")) +
+  scale_fill_manual(name = "Wind speed (kts)",
+                    values = c("yellow", "orange", "red")) +
+  ggtitle("scale_radii = 0.5")
+
+grid.arrange(f, h, ncol = 1)
