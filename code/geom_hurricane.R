@@ -1,43 +1,51 @@
-library(dplyr)
-library(geosphere)
-library(ggplot2)
-library(ggmap)
-library(grid)
-library(magrittr)
-
-#' geom_hurricane
+#' Draw hurricane radii 
 #'
-#' @description This geometry is used to plot a polygon from hurricane wind 
-#' radii in the four directions NE, SE, SW, NW on a map. 
+#' This geometry is used to plot a polygon from hurricane wind 
+#' radii based on the center coordinates in the four directions NE, SE, SW, NW on a map. 
 #' 
-#' #' @section Aesthetics:
-#' \code{geom_hurricane} understands the following aesthetics (required aesthetics are in bold):
+#' @section Aesthetics:
+#' \code{geom_hurricane} understands the following aesthetics (required aesthetics are in bold).
+#' Either \code{fill} or \code{color} are only required if radii of more than one wind speed are plotted.
 #' \itemize{
-#'   \item \code{x}
-#'   \item \code{y}
-#'   \item \code{rad_ne}
-#'   \item \code{rad_se}
-#'   \item \code{rad_sw}
-#'   \item \code{rad_nw}
-#'   \item \code{fill}
-#'   \item \code{color}
+#'   \item \code{**x**}
+#'   \item \code{**y**}
+#'   \item \code{**rad_ne**}
+#'   \item \code{**rad_se**}
+#'   \item \code{**rad_sw**}
+#'   \item \code{**rad_nw**}
+#'   \item \code{**fill**} 
+#'   \item \code{**color**}
 #'   \item \code{linewidth}
+#'   \item \code{linetype}
+#'   \item \code{alpha}
 #' }
 #' 
-#' @param stat The statistical transformation to use. Defaults to "radius".
+#' @param x The longitude given in deg. Must have negative values for locations 
+#' in the Western hemisphere.
+#' @param y The latitude given in deg.
+#' @param rad_ne The wind radius for the northeast direction.
+#' @param rad_se The wind radius for the southeast direction.
+#' @param rad_sw The wind radius for the southwest direction.
+#' @param rad_nw The wind radius for the northwest direction.
 #' @param scale_radii The scaling factor for the radii. Defaults to 1.
-#' @param nm A flag whether radii in the data are given as nautical miles.
-#' Defaults to /code{TRUE}. If /code{TRUE}, nautical miles will be transformed to metric scale.
-#' Set to /code{FALSE} if radii are given in meters.
+#' @param runit Unit of the wind radii. Either 'nm' for nautical miles or 'm' for meters.
+#' Defaults to 'nm'.
+#' @param stat The statistical transformation to use. Defaults to "hurricane".
+#' @param ... other arguments passed on to \code{\link{layer}}. These are
+#'   often aesthetics, used to set an aesthetic to a fixed value, like
+#'   \code{color = "red"} or \code{size = 3}. They may also be parameters
+#'   to the paired geom/stat
 #' @inheritParams ggplot2::layer
-#' @inheritParams stat_radius
+#' @inheritParams ggplot2::ggproto
 #' 
 #' @return A layer for plotting hurricane wind radii.
 #' 
 #' @importFrom ggmap get_map ggmap
+#' @importFrom ggplot2 aes geom_polygon 
 #' 
 #' @examples /dontrun{
-#' # library(ggmap)
+#' library(ggmap)
+#' library(ggplot2)
 #' 
 #' # Create storm data
 #' d <- data.frame(
@@ -69,10 +77,10 @@ library(magrittr)
 #' @export
 geom_hurricane <- function(mapping = NULL, 
                            data = NULL, 
-                           stat = "radius",
+                           stat = "hurricane",
                            position = "identity", 
                            scale_radii = 1,
-                           runit = nm,
+                           runit = "nm",
                            show.legend = NA, 
                            inherit.aes = TRUE, 
                            ...) {
@@ -92,8 +100,7 @@ geom_hurricane <- function(mapping = NULL,
   )
 }
 
-#' Geom Hurricane
-#' @rdname ggplot2-ggproto
+#' @rdname geom_hurricane
 #' @format NULL
 #' @usage NULL
 #' @export
@@ -106,57 +113,9 @@ GeomHurricane <- ggplot2::ggproto("GeomHurricane", GeomPolygon,
 )
 
 
-#' Radius statistic
-#'
-#' This statistic computes the coordinates for plotting hurricane 
-#' wind radii based on the provided radii and coordinates.
-#' 
-#' @param data A data frame containing the coordinates
-#' for longitude and latitude (in deg), and the wind radii for the 
-#' directions NE, SE, SW and NW.
-#' @param scale_radii The scaling factor for the radii. Defaults to 1.
-#' @param runit Unit of the wind radii. Either 'nm' for nautical miles or'm' for meters.
-#' Defaults to 'nm'.
-#' @inheritParams ggplot2::layer
-#' 
-#' @importFrom ggplot2 layer
-#' 
-#' @return A layer with the computed coordinates for plotting hurricane wind radii.
-#' 
-#' @examples /dontrun{
-#' # library(ggmap)
-#' 
-#' # Create data frame
-#' d <- data.frame(
-#'   Longitude = -94.6,
-#'   Latitude = 29.1,
-#'   Wind_Speed = factor(c(34, 50, 64)),
-#'   NE = c(225, 150, 110),
-#'   SE = c(200, 160, 90),
-#'   SW = c(125, 80, 55),
-#'   NW = c(125, 75, 45)
-#' )
-#' 
-#' # Background map
-#' m <- get_map(c(left = d[1, "Longitude"] - 10, bottom = d[1, "Latitude"] - 10, 
-#'                right = d[1, "Longitude"] + 10, top = d[1, "Latitude"] + 10),
-#'              source = "stadia", maptype = "stamen_toner_background", zoom = 5) %>% 
-#'   ggmap(extent = "device")
-#' 
-#' m + 
-#'  geom_polygon(data = d, stat = "radius", 
-#'             aes(x = Longitude, y = Latitude, rad_ne = NE,
-#'                 rad_se = SE, rad_sw = SW, rad_nw = NW,
-#'                 fill = Wind_Speed, color = Wind_Speed, alpha = 0.5))
-#' }
-#' 
-#' 
-#' 
-#' 
-#' 
-#' 
+#' @rdname geom_hurricane
 #' @export
-stat_radius <- function(mapping = NULL, 
+stat_hurricane <- function(mapping = NULL, 
                         data = NULL, 
                         geom = "polygon",
                         position = "identity", 
@@ -166,7 +125,7 @@ stat_radius <- function(mapping = NULL,
                         inherit.aes = TRUE, 
                         ...) {
   ggplot2::layer(
-    stat = StatRadius, 
+    stat = StatHurricane, 
     data = data, 
     mapping = mapping, 
     geom = geom, 
@@ -180,72 +139,45 @@ stat_radius <- function(mapping = NULL,
   )        
 }
 
-
-#' Statistic for plotting hurricane wind radii
-#'
-#' @description This statistic computes the coordinates for plotting hurricane 
-#' wind radii based on the provided radii and origin coordinates. Metric scale
-#' for the wind radii is required. 
-#' 
-#' @param data A data frame containing the necessary columns: x, y, rad_ne, 
-#' rad_se, rad_sw, rad_nw.
-#' @param scales The scales used in the plot.
-#' @param rad_ne The wind radius for the northeast direction.
-#' @param rad_se The wind radius for the southeast direction.
-#' @param rad_sw The wind radius for the southwest direction.
-#' @param rad_nw The wind radius for the northwest direction.
-#' @param scale_fct The scaling factor for the radii. Defaults to 1.
-#' @param nm Boolean indicator whether radii are given as nautic miles. 
-#' Defaults to FALSE. If TRUE, radii will be transformed to metric scale.
-#' 
-#' @importFrom dplyr across mutate
-#' @importFrom geosphere destPoint
-#' @importFrom ggplot2 aes ggproto
-#' @importFrom magrittr  %>% 
-#' 
-#' @return A data frame with the computed coordinates for plotting hurricane wind radii.
-#' 
-#' @export
-
-
-
-#' @rdname stat_hurricane
+#' @rdname geom_hurricane
 #' @usage NULL
 #' @format NULL
+#' @importFrom dplyr across mutate
+#' @importFrom geosphere destPoint
+#' @importFrom magrittr  %>% 
 #' @export
-StatRadius <- ggplot2::ggproto("StatRadius", Stat,
-                               required_aes = c("x", "y", "rad_ne", "rad_se", "rad_sw", "rad_nw"),
-                               
-                               compute_group = function(data, scales, rad_ne, rad_se, rad_sw, rad_nw, scale_radii = 1, runit = "nm") {
+StatHurricane <- ggplot2::ggproto(
+  "StatHurricane", Stat,
+  
+  required_aes = c("x", "y", "rad_ne", "rad_se", "rad_sw", "rad_nw"),
+  
+  compute_group = function(data, scales, rad_ne, rad_se, rad_sw, rad_nw, scale_radii = 1, runit = "nm") {
+    
+    if (runit == "nm") {
+      data <- data %>%
+        dplyr::mutate(
+          dplyr::across(
+            c(rad_ne, rad_se, rad_sw, rad_nw), ~ .x * 1852
+          ))
+    }
+    
+    coords <- c(data$x, data$y)
                                  
-                                 if (runit == "nm") {
-                                   data <- data %>%
-                                     dplyr::mutate(
-                                       dplyr::across(
-                                         c(rad_ne, rad_se, rad_sw, rad_nw), ~ .x * 1852
-                                       ))
-                                 }
-
-                                 coords <- c(data$x, data$y)
+    deg_ne <- 1:90
+    deg_se <- 91:180
+    deg_sw <- 181:270
+    deg_nw <- 271:360
                                  
-                                 deg_NE <- 1:90
-                                 deg_SE <- 91:180
-                                 deg_SW <- 181:270
-                                 deg_NW <- 271:360
+    q_1 <- geosphere::destPoint(coords, b = deg_ne, d = data$rad_ne * scale_radii)
+    q_2 <- geosphere::destPoint(coords, b = deg_se, d = data$rad_se * scale_radii)
+    q_3 <- geosphere::destPoint(coords, b = deg_sw, d = data$rad_sw * scale_radii) 
+    q_4 <- geosphere::destPoint(coords, b = deg_nw, d = data$rad_nw * scale_radii) 
                                  
-                                 q_1 <- geosphere::destPoint(coords, b = deg_NE, d = data$rad_ne * scale_radii)
-                                 q_2 <- geosphere::destPoint(coords, b = deg_SE, d = data$rad_se * scale_radii)
-                                 q_3 <- geosphere::destPoint(coords, b = deg_SW, d = data$rad_sw * scale_radii) 
-                                 q_4 <- geosphere::destPoint(coords, b = deg_NW, d = data$rad_nw * scale_radii) 
+    p <- rbind(q_1, q_2, q_3, q_4)
+    p <- rbind(p, p[1, ])
                                  
-                                 point_matrix <- rbind(q_1, q_2, q_3, q_4)
-                                 point_matrix <- rbind(point_matrix, point_matrix[1, ])
-                                 
-                                 point_df <- data.frame(x = point_matrix[, 1], y = point_matrix[, 2])
-                                 return(point_df)
-                               }
+    df <- data.frame(x = p[, 1], y = p[, 2])
+    return(df)
+    
+    }
 )
-
-
-
-
