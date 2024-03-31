@@ -35,13 +35,14 @@
 #'   often aesthetics, used to set an aesthetic to a fixed value, like
 #'   \code{color = "red"} or \code{size = 3}. They may also be parameters
 #'   to the paired geom/stat
-#' @inheritParams ggplot2::layer
+#' @inheritParams ggplot2::geom_polygon
 #' @inheritParams ggplot2::ggproto
+#' @inheritParams ggplot2::layer
 #' 
 #' @return A layer for plotting hurricane wind radii.
 #' 
+#' @section Reprex: 
 #' @importFrom ggmap get_map ggmap
-#' @importFrom ggplot2 aes geom_polygon 
 #' 
 #' @examples /dontrun{
 #' library(ggmap)
